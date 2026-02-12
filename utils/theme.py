@@ -525,6 +525,94 @@ def inject_global_css():
     [data-testid="stDataFrame"] {{
         background-color: {c['bg_card']} !important;
     }}
+
+    /* ── File Uploader ──────────────────────────────────────────── */
+    [data-testid="stFileUploader"] {{
+        background-color: {c['bg_card']} !important;
+        border-color: {c['border']} !important;
+    }}
+    [data-testid="stFileUploader"] section {{
+        background-color: {c['bg_card']} !important;
+    }}
+    [data-testid="stFileUploader"] section > div {{
+        color: {c['text_body']} !important;
+    }}
+    [data-testid="stFileUploader"] small,
+    [data-testid="stFileUploader"] span {{
+        color: {c['text_muted']} !important;
+    }}
+    [data-testid="stFileUploaderDropzone"] {{
+        background-color: {c['bg_card']} !important;
+        color: {c['text_body']} !important;
+    }}
+    [data-testid="stFileUploaderDropzone"] span,
+    [data-testid="stFileUploaderDropzone"] small,
+    [data-testid="stFileUploaderDropzone"] div {{
+        color: {c['text_muted']} !important;
+    }}
+    [data-testid="stFileUploaderDropzone"] button {{
+        color: {c['accent_primary']} !important;
+    }}
+
+    /* ── Expander ───────────────────────────────────────────────── */
+    [data-testid="stExpander"] {{
+        background-color: {c['bg_card']} !important;
+        border-color: {c['border']} !important;
+    }}
+    [data-testid="stExpander"] summary,
+    [data-testid="stExpander"] summary span,
+    .streamlit-expanderHeader {{
+        color: {c['text_body']} !important;
+        background-color: {c['bg_card']} !important;
+    }}
+    [data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
+        background-color: {c['bg_card']} !important;
+    }}
+
+    /* ── Slider ─────────────────────────────────────────────────── */
+    [data-testid="stSlider"] label,
+    [data-testid="stSlider"] div {{
+        color: {c['text_body']} !important;
+    }}
+    [data-baseweb="slider"] div[role="slider"] {{
+        background-color: {c['accent_primary']} !important;
+    }}
+
+    /* ── Checkbox / Radio ───────────────────────────────────────── */
+    .stCheckbox label span,
+    .stRadio label span {{
+        color: {c['text_body']} !important;
+    }}
+
+    /* ── Metric cards ───────────────────────────────────────────── */
+    [data-testid="stMetric"] {{
+        background: {c['bg_card']} !important;
+    }}
+
+    /* ── Tooltips / Popovers ────────────────────────────────────── */
+    [data-baseweb="tooltip"] {{
+        background-color: {c['bg_card']} !important;
+        color: {c['text_body']} !important;
+    }}
+
+    /* ── Alerts / Notifications ─────────────────────────────────── */
+    [data-testid="stNotification"] {{
+        background-color: {c['bg_card']} !important;
+    }}
+
+    /* ── Bottom toolbar / status bar ────────────────────────────── */
+    [data-testid="stBottom"],
+    [data-testid="stStatusWidget"],
+    footer {{
+        background-color: {c['bg_primary']} !important;
+        color: {c['text_muted']} !important;
+    }}
+
+    /* ── Multi-select tags ──────────────────────────────────────── */
+    [data-baseweb="tag"] {{
+        background-color: {c['hover_bg']} !important;
+        color: {c['text_body']} !important;
+    }}
     </style>
     """
 
