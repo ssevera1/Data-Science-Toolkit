@@ -2,18 +2,19 @@
 
 import plotly.express as px
 import plotly.graph_objects as go
-from charts.theme import apply_theme, COLORS
+from charts.theme import apply_theme, get_chart_colors
 
 
 def grouped_boxplot(df, value_col, group_col, title=None):
     """Box plot with data points, grouped by a categorical variable."""
+    colors = get_chart_colors()
     fig = px.box(
         df,
         x=group_col,
         y=value_col,
         color=group_col,
         points="all",
-        color_discrete_sequence=COLORS,
+        color_discrete_sequence=colors,
         title=title or f"{value_col} by {group_col}",
     )
     fig.update_traces(marker=dict(size=4, opacity=0.6))
@@ -24,6 +25,7 @@ def grouped_boxplot(df, value_col, group_col, title=None):
 def paired_boxplot(df, col1, col2, title=None):
     """Side-by-side box plots for paired data."""
     import pandas as pd
+    colors = get_chart_colors()
 
     melted = pd.DataFrame({
         "Value": list(df[col1]) + list(df[col2]),
@@ -36,7 +38,7 @@ def paired_boxplot(df, col1, col2, title=None):
         y="Value",
         color="Condition",
         points="all",
-        color_discrete_sequence=COLORS,
+        color_discrete_sequence=colors,
         title=title or f"{col1} vs {col2}",
     )
     fig.update_traces(marker=dict(size=4, opacity=0.6))
@@ -46,11 +48,12 @@ def paired_boxplot(df, col1, col2, title=None):
 
 def single_boxplot(series, name, title=None):
     """Single box plot for one-sample tests."""
+    colors = get_chart_colors()
     fig = go.Figure()
     fig.add_trace(go.Box(
         y=series,
         name=name,
-        marker_color=COLORS[0],
+        marker_color=colors[0],
         boxpoints="all",
         jitter=0.3,
         pointpos=-1.5,

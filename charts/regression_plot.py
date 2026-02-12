@@ -3,7 +3,8 @@
 import plotly.graph_objects as go
 import numpy as np
 import statsmodels.api as sm
-from charts.theme import apply_theme, COLORS
+from charts.theme import apply_theme, get_chart_colors
+from utils.theme import get_colors
 
 
 def regression_scatter(df, x_col, y_col, title=None):
@@ -11,6 +12,8 @@ def regression_scatter(df, x_col, y_col, title=None):
     clean = df[[x_col, y_col]].dropna()
     x = clean[x_col].values
     y = clean[y_col].values
+    colors = get_chart_colors()
+    c = get_colors()
 
     fig = go.Figure()
 
@@ -19,7 +22,7 @@ def regression_scatter(df, x_col, y_col, title=None):
         x=x, y=y,
         mode="markers",
         name="Data",
-        marker=dict(color=COLORS[0], size=7, opacity=0.7),
+        marker=dict(color=colors[0], size=7, opacity=0.7),
     ))
 
     # Fit OLS
@@ -38,7 +41,7 @@ def regression_scatter(df, x_col, y_col, title=None):
         y=pred_summary["mean"],
         mode="lines",
         name="Regression line",
-        line=dict(color=COLORS[1], width=2),
+        line=dict(color=colors[1], width=2),
     ))
 
     # Confidence band
@@ -46,7 +49,7 @@ def regression_scatter(df, x_col, y_col, title=None):
         x=np.concatenate([x_sorted, x_sorted[::-1]]),
         y=np.concatenate([pred_summary["mean_ci_upper"], pred_summary["mean_ci_lower"][::-1]]),
         fill="toself",
-        fillcolor="rgba(26,26,46,0.15)",
+        fillcolor=f"rgba({_hex_to_rgb(c['bg_card'])},0.15)",
         line=dict(color="rgba(255,255,255,0)"),
         name="95% CI",
     ))
@@ -61,13 +64,14 @@ def regression_scatter(df, x_col, y_col, title=None):
 
 def multi_regression_actual_vs_predicted(y_actual, y_predicted, title=None):
     """Actual vs predicted plot for multiple regression."""
+    colors = get_chart_colors()
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
         x=y_predicted, y=y_actual,
         mode="markers",
         name="Observations",
-        marker=dict(color=COLORS[0], size=7, opacity=0.7),
+        marker=dict(color=colors[0], size=7, opacity=0.7),
     ))
 
     # Perfect prediction line
@@ -77,7 +81,7 @@ def multi_regression_actual_vs_predicted(y_actual, y_predicted, title=None):
         x=[min_val, max_val], y=[min_val, max_val],
         mode="lines",
         name="Perfect fit",
-        line=dict(color=COLORS[1], width=2, dash="dash"),
+        line=dict(color=colors[1], width=2, dash="dash"),
     ))
 
     fig.update_layout(
@@ -86,3 +90,8 @@ def multi_regression_actual_vs_predicted(y_actual, y_predicted, title=None):
         yaxis_title="Actual",
     )
     return apply_theme(fig)
+
+
+def _hex_to_rgb(hex_color: str) -> str:
+    h = hex_color.lstrip("#")
+    return f"{int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)}"

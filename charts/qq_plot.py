@@ -3,13 +3,14 @@
 import plotly.graph_objects as go
 import numpy as np
 from scipy import stats
-from charts.theme import apply_theme, COLORS
+from charts.theme import apply_theme, get_chart_colors
 
 
 def qq_plot(series, name, title=None):
     """QQ plot comparing data to normal distribution."""
     data = np.sort(series.dropna().values)
     n = len(data)
+    colors = get_chart_colors()
 
     # Theoretical quantiles
     theoretical = stats.norm.ppf(np.arange(1, n + 1) / (n + 1))
@@ -22,7 +23,7 @@ def qq_plot(series, name, title=None):
         y=data,
         mode="markers",
         name="Data",
-        marker=dict(color=COLORS[0], size=6, opacity=0.7),
+        marker=dict(color=colors[0], size=6, opacity=0.7),
     ))
 
     # Reference line
@@ -35,7 +36,7 @@ def qq_plot(series, name, title=None):
         y=line_y,
         mode="lines",
         name="Reference line",
-        line=dict(color=COLORS[1], width=2, dash="dash"),
+        line=dict(color=colors[1], width=2, dash="dash"),
     ))
 
     fig.update_layout(

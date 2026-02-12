@@ -3,8 +3,6 @@ Entry point: navigation, styling, state initialization.
 """
 
 import streamlit as st
-from utils.theme import inject_global_css
-from core.state import init_state
 
 st.set_page_config(
     page_title="DS Power Tools",
@@ -13,24 +11,47 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Theme selector (must run before CSS injection) ────────────────────────────
+if "app_theme" not in st.session_state:
+    st.session_state["app_theme"] = "Dark"
+
+theme_choice = st.sidebar.selectbox(
+    "Theme",
+    ["Dark", "Retro Light"],
+    index=["Dark", "Retro Light"].index(st.session_state["app_theme"]),
+    key="_theme_selector",
+)
+
+if theme_choice != st.session_state["app_theme"]:
+    st.session_state["app_theme"] = theme_choice
+    st.rerun()
+
+# ── Styling & state init ─────────────────────────────────────────────────────
+from utils.theme import inject_global_css, register_plotly_theme, get_colors
+from core.state import init_state
+
+register_plotly_theme()
 inject_global_css()
 init_state()
 
-# Sidebar branding
+# ── Sidebar branding ─────────────────────────────────────────────────────────
+c = get_colors()
+accent_grad = f"linear-gradient(90deg,{c['title_gradient_start']} 0%,{c['title_gradient_end']} 100%)"
+
 st.sidebar.markdown(
-    """
-    <div style="text-align:center;padding:1.5rem 1rem 1rem 1rem;border-bottom:1px solid #2a2a4a;margin-bottom:1rem;">
+    f"""
+    <div style="text-align:center;padding:1.5rem 1rem 1rem 1rem;border-bottom:1px solid {c['border']};margin-bottom:1rem;">
         <div style="
             font-size:1.6rem;
             font-weight:700;
-            background:linear-gradient(90deg,#667eea 0%,#764ba2 100%);
+            background:{accent_grad};
             -webkit-background-clip:text;
             -webkit-text-fill-color:transparent;
         ">DS Power Tools</div>
-        <p style="color:#a0a0b8;font-size:0.8rem;margin-top:0.25rem;">
+        <p style="color:{c['text_muted']};font-size:0.8rem;margin-top:0.25rem;">
             Data Science &amp; Statistics Toolkit
         </p>
-        <p style="color:#a0a0b8;font-size:0.75rem;font-style:italic;">
+        <p style="color:{c['text_muted']};font-size:0.75rem;font-style:italic;">
             Created by Scott Severance
         </p>
     </div>

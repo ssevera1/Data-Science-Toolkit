@@ -3,12 +3,13 @@
 import plotly.graph_objects as go
 import numpy as np
 from scipy import stats
-from charts.theme import apply_theme, COLORS
+from charts.theme import apply_theme, get_chart_colors
 
 
 def histogram_with_normal(series, name, title=None, bins=None):
     """Histogram with optional normal distribution curve."""
     data = series.dropna().values
+    colors = get_chart_colors()
 
     fig = go.Figure()
 
@@ -16,7 +17,7 @@ def histogram_with_normal(series, name, title=None, bins=None):
     fig.add_trace(go.Histogram(
         x=data,
         name=name,
-        marker_color=COLORS[0],
+        marker_color=colors[0],
         opacity=0.7,
         nbinsx=bins or min(30, max(10, len(data) // 5)),
         histnorm="probability density",
@@ -32,7 +33,7 @@ def histogram_with_normal(series, name, title=None, bins=None):
             y=normal_curve,
             mode="lines",
             name="Normal curve",
-            line=dict(color=COLORS[1], width=2),
+            line=dict(color=colors[1], width=2),
         ))
 
     fig.update_layout(

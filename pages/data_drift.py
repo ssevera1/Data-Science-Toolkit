@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy import stats
-from utils.theme import page_header
+from utils.theme import page_header, get_colors
 
 
 MAX_SIZE_MB = 50
@@ -141,9 +141,11 @@ def render():
             c3.metric("Drift %", f"{n_drifted / len(common_cols) * 100:.1f}%")
 
             # Color code
+            _c = get_colors()
+            _drift_bg = "#3d1f1f" if _c["bg_primary"] == "#0e1117" else "#fde8e8"
             def highlight_drift(row):
                 if row["Drift Detected"]:
-                    return ["background-color: #3d1f1f"] * len(row)
+                    return [f"background-color: {_drift_bg}"] * len(row)
                 return [""] * len(row)
 
             st.dataframe(drift_df.style.apply(highlight_drift, axis=1),
@@ -197,10 +199,11 @@ def render():
             if sel:
                 for col in sel:
                     fig = go.Figure()
+                    _dc = get_colors()
                     fig.add_trace(go.Histogram(x=ref_df[col].dropna(), name="Reference",
-                                               opacity=0.6, marker_color="#3498db"))
+                                               opacity=0.6, marker_color=_dc["info"]))
                     fig.add_trace(go.Histogram(x=cur_df[col].dropna(), name="Current",
-                                               opacity=0.6, marker_color="#e74c3c"))
+                                               opacity=0.6, marker_color=_dc["error"]))
                     fig.update_layout(barmode="overlay", title=col, height=350)
                     st.plotly_chart(fig, use_container_width=True)
 
@@ -215,8 +218,9 @@ def render():
                 cur_vc.columns = [col, "Count"]
                 cur_vc["Source"] = "Current"
                 combined = pd.concat([ref_vc, cur_vc])
+                _dc2 = get_colors()
                 fig = px.bar(combined, x=col, y="Count", color="Source", barmode="group",
-                             title=col, color_discrete_map={"Reference": "#3498db", "Current": "#e74c3c"})
+                             title=col, color_discrete_map={"Reference": _dc2["info"], "Current": _dc2["error"]})
                 fig.update_layout(height=400)
                 st.plotly_chart(fig, use_container_width=True)
 

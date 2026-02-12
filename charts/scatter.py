@@ -3,17 +3,18 @@
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
-from charts.theme import apply_theme, COLORS
+from charts.theme import apply_theme, get_chart_colors
 
 
 def correlation_scatter(df, x_col, y_col, r_value=None, title=None):
     """Scatter plot with optional trend line for correlation."""
+    colors = get_chart_colors()
     fig = px.scatter(
         df,
         x=x_col,
         y=y_col,
         trendline="ols",
-        color_discrete_sequence=COLORS,
+        color_discrete_sequence=colors,
         title=title or f"{y_col} vs {x_col}",
     )
 
@@ -24,7 +25,7 @@ def correlation_scatter(df, x_col, y_col, r_value=None, title=None):
 
     # Style the trendline
     fig.update_traces(
-        line=dict(color=COLORS[1], width=2),
+        line=dict(color=colors[1], width=2),
         selector=dict(mode="lines"),
     )
 
@@ -34,9 +35,9 @@ def correlation_scatter(df, x_col, y_col, r_value=None, title=None):
             xref="paper", yref="paper",
             x=0.05, y=0.95,
             showarrow=False,
-            font=dict(size=14, color=COLORS[0]),
+            font=dict(size=14, color=colors[0]),
             bgcolor="rgba(255,255,255,0.8)",
-            bordercolor=COLORS[0],
+            bordercolor=colors[0],
             borderwidth=1,
             borderpad=4,
         )

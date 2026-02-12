@@ -9,7 +9,7 @@ from components.results_display import render_significance_result, render_effect
 from stats.regression import logistic_regression
 from core.state import get_df
 import plotly.graph_objects as go
-from charts.theme import apply_theme, COLORS
+from charts.theme import apply_theme, get_chart_colors
 
 
 def render():
@@ -71,7 +71,7 @@ def render():
                 fig.add_trace(go.Scatter(
                     x=clean[predictors[0]], y=clean[dv],
                     mode="markers", name="Data",
-                    marker=dict(color=COLORS[0], size=7, opacity=0.6),
+                    marker=dict(color=get_chart_colors()[0], size=7, opacity=0.6),
                 ))
 
                 # Predicted probabilities
@@ -81,7 +81,7 @@ def render():
                     x=clean[predictors[0]].iloc[sort_idx],
                     y=probs[sort_idx],
                     mode="lines", name="Predicted probability",
-                    line=dict(color=COLORS[1], width=2),
+                    line=dict(color=get_chart_colors()[1], width=2),
                 ))
 
                 fig.update_layout(

@@ -8,7 +8,7 @@ from components.variable_selector import select_any_variable
 from components.results_display import render_significance_result
 from stats.binomial import binomial_test
 from core.state import get_df
-from charts.theme import apply_theme, COLORS
+from charts.theme import apply_theme, get_chart_colors
 
 
 def render():
@@ -68,7 +68,7 @@ def render():
             fig.add_trace(go.Bar(
                 x=[str(result["success_label"]), str(result["failure_label"])],
                 y=[result["n_success"], result["n_failure"]],
-                marker_color=[COLORS[0], COLORS[1]],
+                marker_color=[get_chart_colors()[0], get_chart_colors()[1]],
                 text=[result["n_success"], result["n_failure"]],
                 textposition="auto",
             ))

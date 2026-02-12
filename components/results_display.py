@@ -4,6 +4,7 @@ import html as html_lib
 import streamlit as st
 import pandas as pd
 from core.constants import ALPHA
+from utils.theme import get_colors
 
 
 def format_p_value(p):
@@ -101,7 +102,8 @@ def render_assumption_check(name, test_stat, p_value, passed, detail=None):
     if p_value is not None:
         markup += f", p = {format_p_value(p_value)}"
     if safe_detail:
-        markup += f"<br><small style='color:#a0a0b8; margin-left: 2rem;'>{safe_detail}</small>"
+        muted = get_colors()["text_muted"]
+        markup += f"<br><small style='color:{muted}; margin-left: 2rem;'>{safe_detail}</small>"
     markup += "</div>"
 
     st.markdown(markup, unsafe_allow_html=True)

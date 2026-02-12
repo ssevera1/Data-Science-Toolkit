@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from core.state import set_var_type
+from utils.theme import get_colors
 
 
 def _auto_detect_var_types(df):
@@ -27,19 +28,32 @@ def _auto_detect_var_types(df):
             set_var_type(col, "Nominal")
 
 
+def _hex_to_rgb(hex_color: str) -> str:
+    h = hex_color.lstrip("#")
+    return f"{int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)}"
+
+
 def render():
+    c = get_colors()
+    accent_grad = f"linear-gradient(90deg,{c['title_gradient_start']} 0%,{c['title_gradient_end']} 100%)"
+    card_grad = f"linear-gradient(135deg,{c['bg_card']} 0%,{c['bg_sidebar']} 100%)"
+    accent_bg_start = f"rgba({_hex_to_rgb(c['title_gradient_start'])},0.12)"
+    accent_bg_end = f"rgba({_hex_to_rgb(c['title_gradient_end'])},0.08)"
+    accent_border = f"rgba({_hex_to_rgb(c['accent_primary'])},0.3)"
+    accent_shadow = f"rgba({_hex_to_rgb(c['accent_primary'])},0.25)"
+
     # ── Hero Section ──────────────────────────────────────────────────────
     st.markdown(
-        """
+        f"""
         <div style="text-align:center;padding:2rem 0 1.5rem 0;">
             <div class="hero-badge">⚡ Open-Source Data Science &amp; Statistics Toolkit</div>
             <div class="hero-title">DS Power Tools</div>
-            <p style="font-size:1.15rem;color:#a0a0b8;margin:0.5rem auto 0 auto;max-width:700px;text-align:center;">
+            <p style="font-size:1.15rem;color:{c['text_muted']};margin:0.5rem auto 0 auto;max-width:700px;text-align:center;">
                 Eliminate the hardest parts of data science — automated profiling,
                 cleaning, feature engineering, model selection, explainability,
                 and a full suite of statistical tests.
             </p>
-            <p style="font-size:0.95rem;color:#a0a0b8;margin:0.75rem auto 0 auto;font-style:italic;">
+            <p style="font-size:0.95rem;color:{c['text_muted']};margin:0.75rem auto 0 auto;font-style:italic;">
                 Created by Scott Severance
             </p>
         </div>
@@ -51,25 +65,25 @@ def render():
 
     # ── Data Import (shared across ALL tools) ─────────────────────────────
     st.markdown(
-        """
+        f"""
         <div style="
-            background:linear-gradient(135deg,rgba(102,126,234,0.12) 0%,rgba(118,75,162,0.08) 100%);
-            border:1px solid rgba(102,126,234,0.3);
+            background:linear-gradient(135deg,{accent_bg_start} 0%,{accent_bg_end} 100%);
+            border:1px solid {accent_border};
             border-radius:14px;
             padding:1.5rem 2rem;
             margin-bottom:1.5rem;
         ">
             <h2 style="
                 margin:0 0 0.25rem 0;
-                background:linear-gradient(90deg,#667eea 0%,#764ba2 100%);
+                background:{accent_grad};
                 -webkit-background-clip:text;
                 -webkit-text-fill-color:transparent;
                 font-size:1.5rem;
             ">Import Your Data</h2>
-            <p style="color:#a0a0b8;margin:0;font-size:0.95rem;">
-                Upload a dataset here to use across <strong style="color:#e0e0e0;">all</strong> Data Science
+            <p style="color:{c['text_muted']};margin:0;font-size:0.95rem;">
+                Upload a dataset here to use across <strong style="color:{c['text_body']};">all</strong> Data Science
                 and Statistics tools. You can also enter data manually via
-                <strong style="color:#e0e0e0;">Statistics Tools &gt; Data Input</strong>.
+                <strong style="color:{c['text_body']};">Statistics Tools &gt; Data Input</strong>.
             </p>
         </div>
         """,
@@ -150,20 +164,20 @@ def render():
     st.caption("Upload data above, then navigate to any tool from the sidebar.")
 
     # Card link hover style
-    st.markdown("""
+    st.markdown(f"""
         <style>
-        a.tool-card {
+        a.tool-card {{
             text-decoration:none !important;
             display:block;
-        }
-        a.tool-card > div {
+        }}
+        a.tool-card > div {{
             transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-        }
-        a.tool-card:hover > div {
-            border-color: #667eea !important;
+        }}
+        a.tool-card:hover > div {{
+            border-color: {c['accent_primary']} !important;
             transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(102,126,234,0.25);
-        }
+            box-shadow: 0 6px 20px {accent_shadow};
+        }}
         </style>
     """, unsafe_allow_html=True)
 
@@ -184,10 +198,10 @@ def render():
     for icon, title, desc, url in ds_tools:
         cards_html += f"""
         <a href="/{url}" target="_self" class="tool-card">
-        <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:14px;padding:1.5rem;border:1px solid #2a2a4a;">
+        <div style="background:{card_grad};border-radius:14px;padding:1.5rem;border:1px solid {c['border']};">
             <span style="font-size:1.8rem;display:block;margin-bottom:0.5rem;">{icon}</span>
-            <h3 style="margin-top:0;color:#ffffff;font-size:1.05rem;">{title}</h3>
-            <p style="color:#a0a0b8;font-size:0.9rem;line-height:1.5;margin-bottom:0;">{desc}</p>
+            <h3 style="margin-top:0;color:{c['text_bright']};font-size:1.05rem;">{title}</h3>
+            <p style="color:{c['text_muted']};font-size:0.9rem;line-height:1.5;margin-bottom:0;">{desc}</p>
         </div>
         </a>"""
 
@@ -223,10 +237,10 @@ def render():
     for icon, title, desc, url in stats_tools:
         cards_html += f"""
         <a href="/{url}" target="_self" class="tool-card">
-        <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:14px;padding:1.5rem;border:1px solid #2a2a4a;">
+        <div style="background:{card_grad};border-radius:14px;padding:1.5rem;border:1px solid {c['border']};">
             <span style="font-size:1.8rem;display:block;margin-bottom:0.5rem;">{icon}</span>
-            <h3 style="margin-top:0;color:#ffffff;font-size:1.05rem;">{title}</h3>
-            <p style="color:#a0a0b8;font-size:0.9rem;line-height:1.5;margin-bottom:0;">{desc}</p>
+            <h3 style="margin-top:0;color:{c['text_bright']};font-size:1.05rem;">{title}</h3>
+            <p style="color:{c['text_muted']};font-size:0.9rem;line-height:1.5;margin-bottom:0;">{desc}</p>
         </div>
         </a>"""
 

@@ -8,7 +8,7 @@ from components.variable_selector import select_nominal_variable
 from components.results_display import render_significance_result, render_assumption_check, render_effect_size
 from stats.chi_squared import chi_squared_test
 from core.state import get_df
-from charts.theme import apply_theme, COLORS
+from charts.theme import apply_theme, get_chart_colors
 
 
 def render():
@@ -70,7 +70,7 @@ def render():
             fig = px.bar(
                 contingency.T,
                 barmode="group",
-                color_discrete_sequence=COLORS,
+                color_discrete_sequence=get_chart_colors(),
                 title=f"Frequencies: {var1} × {var2}",
             )
             fig.update_layout(xaxis_title=var2, yaxis_title="Count")

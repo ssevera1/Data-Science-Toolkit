@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from utils.theme import page_header
+from utils.theme import page_header, get_colors
 
 
 def _guard():
@@ -127,8 +127,9 @@ def render():
                     "Count": list(vc.values) + list(y_res.value_counts().values),
                     "Stage": ["Before"] * len(vc) + ["After"] * len(y_res.value_counts()),
                 })
+                _ci_c = get_colors()
                 fig = px.bar(compare, x="Class", y="Count", color="Stage", barmode="group",
-                             color_discrete_map={"Before": "#e74c3c", "After": "#2ecc71"})
+                             color_discrete_map={"Before": _ci_c["error"], "After": _ci_c["success"]})
                 fig.update_layout(height=400)
                 st.plotly_chart(fig, use_container_width=True)
 

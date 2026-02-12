@@ -1,55 +1,50 @@
-"""Plotly template with dark theme colors matching DS Power Tools."""
+"""Plotly template with dynamic theme colors matching DS Power Tools."""
 
 import plotly.graph_objects as go
 import plotly.io as pio
+from utils.theme import get_colors
 
-# Define the color palette (dark theme)
-COLORS = [
-    "#667eea",  # accent primary
-    "#764ba2",  # accent secondary
-    "#3498db",  # info blue
-    "#2ecc71",  # success green
-    "#f39c12",  # warning yellow
-    "#e74c3c",  # error red
-    "#1abc9c",  # teal
-    "#e67e22",  # orange
-    "#9b59b6",  # purple
-    "#2c3e50",  # dark
-]
-
-BACKGROUND = "#0e1117"
-GRID_COLOR = "#2a2a4a"
-TEXT_COLOR = "#e0e0e0"
 FONT_FAMILY = "Inter, sans-serif"
 
 
+def get_chart_colors():
+    """Return the active data-viz colorway list."""
+    return get_colors()["viz"]
+
+
+# Backwards-compatible module-level list (dark defaults).
+# New code should call get_chart_colors() instead.
+COLORS = get_chart_colors()
+
+
 def get_template():
-    """Get the custom Plotly template."""
+    """Get the custom Plotly template using the active palette."""
+    c = get_colors()
     template = go.layout.Template()
 
     template.layout = go.Layout(
-        font=dict(family=FONT_FAMILY, color=TEXT_COLOR, size=13),
-        paper_bgcolor=BACKGROUND,
-        plot_bgcolor=BACKGROUND,
-        colorway=COLORS,
-        title=dict(font=dict(size=16, color="#ffffff")),
+        font=dict(family=FONT_FAMILY, color=c["text_body"], size=13),
+        paper_bgcolor=c["bg_primary"],
+        plot_bgcolor=c["bg_primary"],
+        colorway=c["viz"],
+        title=dict(font=dict(size=16, color=c["text_bright"])),
         xaxis=dict(
-            gridcolor=GRID_COLOR,
-            linecolor=GRID_COLOR,
-            zerolinecolor=GRID_COLOR,
+            gridcolor=c["border"],
+            linecolor=c["border"],
+            zerolinecolor=c["border"],
             title=dict(font=dict(size=13)),
         ),
         yaxis=dict(
-            gridcolor=GRID_COLOR,
-            linecolor=GRID_COLOR,
-            zerolinecolor=GRID_COLOR,
+            gridcolor=c["border"],
+            linecolor=c["border"],
+            zerolinecolor=c["border"],
             title=dict(font=dict(size=13)),
         ),
         legend=dict(
             bgcolor="rgba(0,0,0,0)",
-            bordercolor=GRID_COLOR,
+            bordercolor=c["border"],
             borderwidth=1,
-            font=dict(color=TEXT_COLOR),
+            font=dict(color=c["text_body"]),
         ),
         margin=dict(l=60, r=30, t=50, b=60),
     )
@@ -58,6 +53,6 @@ def get_template():
 
 
 def apply_theme(fig):
-    """Apply the dark theme to a Plotly figure."""
+    """Apply the active theme to a Plotly figure."""
     fig.update_layout(template=get_template())
     return fig

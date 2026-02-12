@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from utils.theme import page_header
+from utils.theme import page_header, get_colors
 
 
 def _guard():
@@ -141,7 +141,7 @@ def render():
             sample = df[miss.index].head(200)
             fig = px.imshow(
                 sample.isnull().astype(int),
-                color_continuous_scale=["#0e1117", "#e74c3c"],
+                color_continuous_scale=[get_colors()["bg_primary"], get_colors()["error"]],
                 aspect="auto",
                 labels=dict(color="Missing"),
             )

@@ -1,7 +1,7 @@
 """
 DS Power Tools — Central styling module.
 
-Provides dark-themed styling for Streamlit, Plotly, and Matplotlib.
+Provides dual-theme styling (Dark / Retro Light) for Streamlit, Plotly, and Matplotlib.
 """
 
 import html
@@ -9,12 +9,13 @@ import streamlit as st
 import plotly.io as pio
 import plotly.graph_objects as go
 
-# ── Color Palette ─────────────────────────────────────────────────────────────
+# ── Color Palettes ───────────────────────────────────────────────────────────
 
-COLORS = {
+DARK_COLORS = {
     "bg_primary": "#0e1117",
     "bg_card": "#1a1a2e",
     "bg_sidebar": "#16213e",
+    "border": "#2a2a4a",
     "text_body": "#e0e0e0",
     "text_muted": "#a0a0b8",
     "text_bright": "#ffffff",
@@ -24,384 +25,528 @@ COLORS = {
     "warning": "#f39c12",
     "error": "#e74c3c",
     "info": "#3498db",
+    "title_gradient_start": "#667eea",
+    "title_gradient_end": "#764ba2",
+    "hover_bg": "#262640",
+    "tab_bg": "#1a1a2e",
+    "table_even_row": "rgba(26,26,46,0.5)",
+    "scrollbar_track": "#0e1117",
+    "footer_text": "#555",
+    # Data viz colorway
+    "viz": [
+        "#667eea", "#764ba2", "#3498db", "#2ecc71",
+        "#f39c12", "#e74c3c", "#1abc9c", "#e67e22",
+        "#9b59b6", "#2c3e50",
+    ],
 }
 
-# ── Plotly Dark Template ──────────────────────────────────────────────────────
-
-_ds_dark = go.layout.Template()
-_ds_dark.layout = go.Layout(
-    paper_bgcolor=COLORS["bg_primary"],
-    plot_bgcolor=COLORS["bg_primary"],
-    font=dict(color=COLORS["text_body"], family="Inter, sans-serif"),
-    title=dict(font=dict(color=COLORS["text_bright"])),
-    xaxis=dict(
-        gridcolor="#2a2a4a",
-        zerolinecolor="#2a2a4a",
-        linecolor="#2a2a4a",
-    ),
-    yaxis=dict(
-        gridcolor="#2a2a4a",
-        zerolinecolor="#2a2a4a",
-        linecolor="#2a2a4a",
-    ),
-    colorway=[
-        COLORS["accent_primary"],
-        COLORS["accent_secondary"],
-        COLORS["info"],
-        COLORS["success"],
-        COLORS["warning"],
-        COLORS["error"],
-        "#1abc9c",
-        "#e67e22",
-        "#9b59b6",
-        "#2c3e50",
+LIGHT_COLORS = {
+    "bg_primary": "#F6F0E2",
+    "bg_card": "#FFFFFF",
+    "bg_sidebar": "#EDE7D9",
+    "border": "#D5CFC1",
+    "text_body": "#000000",
+    "text_muted": "#555555",
+    "text_bright": "#000000",
+    "accent_primary": "#EE0011",
+    "accent_secondary": "#FF281E",
+    "success": "#00B845",
+    "warning": "#FED60E",
+    "error": "#FF281E",
+    "info": "#0089EC",
+    "title_gradient_start": "#EE0011",
+    "title_gradient_end": "#FF281E",
+    "hover_bg": "#F0EAD6",
+    "tab_bg": "#FFFFFF",
+    "table_even_row": "rgba(237,231,217,0.5)",
+    "scrollbar_track": "#F6F0E2",
+    "footer_text": "#888",
+    # Data viz colorway
+    "viz": [
+        "#0089EC", "#00B845", "#FF8027", "#FED60E",
+        "#EE0011", "#764ba2", "#1abc9c", "#e67e22",
+        "#9b59b6", "#2c3e50",
     ],
-    legend=dict(bgcolor="rgba(0,0,0,0)"),
-)
-pio.templates["ds_dark"] = _ds_dark
-pio.templates.default = "ds_dark"
+}
+
+# Backwards-compatible alias so existing `from utils.theme import COLORS` still works
+COLORS = DARK_COLORS
 
 
-# ── Global CSS Injection ──────────────────────────────────────────────────────
+# ── Theme Accessor ───────────────────────────────────────────────────────────
+
+def get_colors():
+    """Return the active palette dict based on session-state theme."""
+    theme = st.session_state.get("app_theme", "Dark")
+    return LIGHT_COLORS if theme == "Retro Light" else DARK_COLORS
+
+
+def _is_light():
+    return st.session_state.get("app_theme", "Dark") == "Retro Light"
+
+
+# ── Plotly Template Registration ─────────────────────────────────────────────
+
+def register_plotly_theme():
+    """Build and register a Plotly template from the active palette."""
+    c = get_colors()
+    tpl = go.layout.Template()
+    tpl.layout = go.Layout(
+        paper_bgcolor=c["bg_primary"],
+        plot_bgcolor=c["bg_primary"],
+        font=dict(color=c["text_body"], family="Inter, sans-serif"),
+        title=dict(font=dict(color=c["text_bright"])),
+        xaxis=dict(
+            gridcolor=c["border"],
+            zerolinecolor=c["border"],
+            linecolor=c["border"],
+        ),
+        yaxis=dict(
+            gridcolor=c["border"],
+            zerolinecolor=c["border"],
+            linecolor=c["border"],
+        ),
+        colorway=c["viz"],
+        legend=dict(bgcolor="rgba(0,0,0,0)"),
+    )
+    pio.templates["ds_dark"] = tpl
+    pio.templates.default = "ds_dark"
+
+
+# Register once at import time (dark defaults)
+register_plotly_theme()
+
+
+# ── Global CSS Injection ────────────────────────────────────────────────────
 
 def inject_global_css():
-    """Inject comprehensive dark-theme CSS into the Streamlit page."""
-    st.markdown(
-        """
-        <style>
-        /* ── Font ───────────────────────────────────────────────────── */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        html, body, [class*="css"] {
-            font-family: 'Inter', sans-serif;
-        }
+    """Inject theme-aware CSS into the Streamlit page."""
+    c = get_colors()
+    light = _is_light()
 
-        /* ── Sidebar ────────────────────────────────────────────────── */
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #16213e 0%, #0e1117 100%);
-        }
-        section[data-testid="stSidebar"] .stRadio label,
-        section[data-testid="stSidebar"] a {
-            color: #a0a0b8 !important;
-            transition: color 0.2s;
-        }
-        section[data-testid="stSidebar"] .stRadio label:hover,
-        section[data-testid="stSidebar"] a:hover {
-            color: #667eea !important;
-        }
-        section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="page"] {
-            background: linear-gradient(90deg, rgba(102,126,234,0.15) 0%, rgba(118,75,162,0.10) 100%);
-            border-left: 3px solid #667eea;
-        }
+    # Build gradient strings
+    accent_grad = f"linear-gradient(90deg, {c['title_gradient_start']} 0%, {c['title_gradient_end']} 100%)"
+    card_grad = f"linear-gradient(135deg, {c['bg_card']} 0%, {c['bg_sidebar']} 100%)" if not light else f"linear-gradient(135deg, {c['bg_card']} 0%, {c['bg_card']} 100%)"
+    sidebar_grad = f"linear-gradient(180deg, {c['bg_sidebar']} 0%, {c['bg_primary']} 100%)" if not light else f"linear-gradient(180deg, {c['bg_sidebar']} 0%, {c['bg_sidebar']} 100%)"
+    accent_bg_start = f"rgba({_hex_to_rgb(c['title_gradient_start'])},0.15)"
+    accent_bg_end = f"rgba({_hex_to_rgb(c['title_gradient_end'])},0.10)"
+    accent_border_rgba = f"rgba({_hex_to_rgb(c['accent_primary'])},0.3)"
+    accent_shadow = f"rgba({_hex_to_rgb(c['accent_primary'])},0.15)"
+    accent_shadow_hover = f"rgba({_hex_to_rgb(c['accent_primary'])},0.4)"
+    accent_shadow_btn = f"rgba({_hex_to_rgb(c['accent_primary'])},0.25)"
 
-        /* ── Metric Cards ───────────────────────────────────────────── */
-        [data-testid="stMetric"] {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            border: 1px solid #2a2a4a;
-            border-radius: 12px;
-            padding: 1rem 1.2rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        [data-testid="stMetric"]:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102,126,234,0.15);
-        }
-        [data-testid="stMetric"] label {
-            color: #a0a0b8 !important;
-        }
-        [data-testid="stMetric"] [data-testid="stMetricValue"] {
-            color: #ffffff !important;
-            font-weight: 700;
-        }
+    # For light theme buttons, use white text for contrast on red
+    btn_text = "#ffffff"
 
-        /* ── Tabs (pill style) ──────────────────────────────────────── */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            background-color: transparent;
-        }
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 8px;
-            padding: 8px 20px;
-            color: #a0a0b8;
-            background-color: #1a1a2e;
-            border: 1px solid #2a2a4a;
-            transition: all 0.2s;
-        }
-        .stTabs [data-baseweb="tab"]:hover {
-            color: #ffffff;
-            background-color: #262640;
-        }
-        .stTabs [aria-selected="true"] {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
-            color: #ffffff !important;
-            border-color: transparent !important;
-        }
-        .stTabs [data-baseweb="tab-highlight"] {
-            display: none;
-        }
-        .stTabs [data-baseweb="tab-border"] {
-            display: none;
-        }
+    css = f"""
+    <style>
+    /* ── Font ───────────────────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    html, body, [class*="css"] {{
+        font-family: 'Inter', sans-serif;
+    }}
 
-        /* ── Buttons ────────────────────────────────────────────────── */
-        .stButton > button {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            padding: 0.5rem 1.5rem;
-            font-weight: 600;
-            transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(102,126,234,0.25);
-        }
-        .stButton > button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(102,126,234,0.4);
-            opacity: 0.95;
-        }
-        .stButton > button:active {
-            transform: translateY(0);
-        }
+    /* ── Sidebar ────────────────────────────────────────────────── */
+    section[data-testid="stSidebar"] {{
+        background: {sidebar_grad};
+    }}
+    section[data-testid="stSidebar"] .stRadio label,
+    section[data-testid="stSidebar"] a {{
+        color: {c['text_muted']} !important;
+        transition: color 0.2s;
+    }}
+    section[data-testid="stSidebar"] .stRadio label:hover,
+    section[data-testid="stSidebar"] a:hover {{
+        color: {c['accent_primary']} !important;
+    }}
+    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="page"] {{
+        background: linear-gradient(90deg, {accent_bg_start} 0%, {accent_bg_end} 100%);
+        border-left: 3px solid {c['accent_primary']};
+    }}
 
-        /* ── Download Button ────────────────────────────────────────── */
-        .stDownloadButton > button {
-            background: transparent;
-            color: #667eea;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .stDownloadButton > button:hover {
-            background: rgba(102,126,234,0.1);
-            transform: translateY(-1px);
-        }
+    /* ── Metric Cards ───────────────────────────────────────────── */
+    [data-testid="stMetric"] {{
+        background: {card_grad};
+        border: 1px solid {c['border']};
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }}
+    [data-testid="stMetric"]:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px {accent_shadow};
+    }}
+    [data-testid="stMetric"] label {{
+        color: {c['text_muted']} !important;
+    }}
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {{
+        color: {c['text_bright']} !important;
+        font-weight: 700;
+    }}
 
-        /* ── Dataframe ──────────────────────────────────────────────── */
-        [data-testid="stDataFrame"] {
-            border: 1px solid #2a2a4a;
-            border-radius: 10px;
-            overflow: hidden;
-        }
+    /* ── Tabs (pill style) ──────────────────────────────────────── */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 8px;
+        background-color: transparent;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        border-radius: 8px;
+        padding: 8px 20px;
+        color: {c['text_muted']};
+        background-color: {c['tab_bg']};
+        border: 1px solid {c['border']};
+        transition: all 0.2s;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        color: {c['text_bright']};
+        background-color: {c['hover_bg']};
+    }}
+    .stTabs [aria-selected="true"] {{
+        background: {accent_grad} !important;
+        color: {btn_text} !important;
+        border-color: transparent !important;
+    }}
+    .stTabs [data-baseweb="tab-highlight"] {{
+        display: none;
+    }}
+    .stTabs [data-baseweb="tab-border"] {{
+        display: none;
+    }}
 
-        /* ── Inputs / Selects ───────────────────────────────────────── */
-        .stSelectbox > div > div,
-        .stMultiSelect > div > div,
-        .stTextInput > div > div > input,
-        .stNumberInput > div > div > input {
-            border-radius: 8px !important;
-            transition: border-color 0.2s;
-        }
-        .stSelectbox > div > div:hover,
-        .stMultiSelect > div > div:hover,
-        .stTextInput > div > div > input:hover,
-        .stNumberInput > div > div > input:hover {
-            border-color: #667eea !important;
-        }
+    /* ── Buttons ────────────────────────────────────────────────── */
+    .stButton > button {{
+        background: {accent_grad};
+        color: {btn_text};
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.2s;
+        box-shadow: 0 2px 8px {accent_shadow_btn};
+    }}
+    .stButton > button:hover {{
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px {accent_shadow_hover};
+        opacity: 0.95;
+    }}
+    .stButton > button:active {{
+        transform: translateY(0);
+    }}
 
-        /* ── Expander ───────────────────────────────────────────────── */
-        .streamlit-expanderHeader {
-            background: #1a1a2e;
-            border-radius: 8px;
-            border: 1px solid #2a2a4a;
-            color: #e0e0e0;
-            font-weight: 600;
-        }
+    /* ── Download Button ────────────────────────────────────────── */
+    .stDownloadButton > button {{
+        background: transparent;
+        color: {c['accent_primary']};
+        border: 2px solid {c['accent_primary']};
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }}
+    .stDownloadButton > button:hover {{
+        background: rgba({_hex_to_rgb(c['accent_primary'])},0.1);
+        transform: translateY(-1px);
+    }}
 
-        /* ── File Uploader ──────────────────────────────────────────── */
-        [data-testid="stFileUploader"] {
-            border: 2px dashed #2a2a4a;
-            border-radius: 12px;
-            padding: 1rem;
-            transition: border-color 0.2s;
-        }
-        [data-testid="stFileUploader"]:hover {
-            border-color: #667eea;
-        }
+    /* ── Dataframe ──────────────────────────────────────────────── */
+    [data-testid="stDataFrame"] {{
+        border: 1px solid {c['border']};
+        border-radius: 10px;
+        overflow: hidden;
+    }}
 
-        /* ── Alert Boxes ────────────────────────────────────────────── */
-        .stAlert [data-testid="stNotification"] {
-            border-radius: 10px;
-        }
+    /* ── Inputs / Selects ───────────────────────────────────────── */
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div,
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input {{
+        border-radius: 8px !important;
+        transition: border-color 0.2s;
+    }}
+    .stSelectbox > div > div:hover,
+    .stMultiSelect > div > div:hover,
+    .stTextInput > div > div > input:hover,
+    .stNumberInput > div > div > input:hover {{
+        border-color: {c['accent_primary']} !important;
+    }}
 
-        /* ── Divider ────────────────────────────────────────────────── */
-        hr {
-            border-color: #2a2a4a !important;
-        }
+    /* ── Expander ───────────────────────────────────────────────── */
+    .streamlit-expanderHeader {{
+        background: {c['bg_card']};
+        border-radius: 8px;
+        border: 1px solid {c['border']};
+        color: {c['text_body']};
+        font-weight: 600;
+    }}
 
-        /* ── Progress Bar ───────────────────────────────────────────── */
-        .stProgress > div > div > div > div {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        }
+    /* ── File Uploader ──────────────────────────────────────────── */
+    [data-testid="stFileUploader"] {{
+        border: 2px dashed {c['border']};
+        border-radius: 12px;
+        padding: 1rem;
+        transition: border-color 0.2s;
+    }}
+    [data-testid="stFileUploader"]:hover {{
+        border-color: {c['accent_primary']};
+    }}
 
-        /* ── Scrollbar ──────────────────────────────────────────────── */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0e1117;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #2a2a4a;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #667eea;
-        }
+    /* ── Alert Boxes ────────────────────────────────────────────── */
+    .stAlert [data-testid="stNotification"] {{
+        border-radius: 10px;
+    }}
 
-        /* ── Hero Section (home page) ───────────────────────────────── */
-        .hero-section {
-            text-align: center;
-            padding: 2rem 0 1.5rem 0;
-        }
-        .hero-badge {
-            display: inline-block;
-            background: linear-gradient(90deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
-            border: 1px solid rgba(102,126,234,0.3);
-            border-radius: 20px;
-            padding: 0.3rem 1rem;
-            font-size: 0.85rem;
-            color: #667eea;
-            margin-bottom: 1rem;
-        }
-        .hero-title {
-            font-size: 3rem;
-            font-weight: 700;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0.5rem 0;
-            line-height: 1.2;
-        }
-        .hero-subtitle {
-            font-size: 1.15rem;
-            color: #a0a0b8;
-            margin-top: 0.5rem;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-            text-align: center;
-        }
+    /* ── Divider ────────────────────────────────────────────────── */
+    hr {{
+        border-color: {c['border']} !important;
+    }}
 
-        /* ── Tool Cards (home page) ─────────────────────────────────── */
-        .tool-card {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            border-radius: 14px;
-            padding: 1.5rem;
-            border: 1px solid #2a2a4a;
-            min-height: 180px;
-            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-        }
-        .tool-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(102,126,234,0.15);
-            border-color: #667eea;
-        }
-        .tool-card h3 {
-            margin-top: 0;
-            color: #ffffff;
-            font-size: 1.05rem;
-        }
-        .tool-card p {
-            color: #a0a0b8;
-            font-size: 0.9rem;
-            line-height: 1.5;
-            margin-bottom: 0;
-        }
-        .tool-card-icon {
-            font-size: 1.8rem;
-            margin-bottom: 0.5rem;
-            display: block;
-        }
+    /* ── Progress Bar ───────────────────────────────────────────── */
+    .stProgress > div > div > div > div {{
+        background: {accent_grad};
+    }}
 
-        /* ── Footer ─────────────────────────────────────────────────── */
-        .app-footer {
-            text-align: center;
-            color: #555;
-            font-size: 0.85rem;
-            padding: 2rem 0 1rem 0;
-        }
-        .app-footer span {
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 600;
-        }
+    /* ── Scrollbar ──────────────────────────────────────────────── */
+    ::-webkit-scrollbar {{
+        width: 8px;
+        height: 8px;
+    }}
+    ::-webkit-scrollbar-track {{
+        background: {c['scrollbar_track']};
+    }}
+    ::-webkit-scrollbar-thumb {{
+        background: {c['border']};
+        border-radius: 4px;
+    }}
+    ::-webkit-scrollbar-thumb:hover {{
+        background: {c['accent_primary']};
+    }}
 
-        /* ── Statistics Results (dark theme) ───────────────────────── */
-        .p-significant {
-            color: #2ecc71;
-            font-weight: 700;
-        }
-        .p-not-significant {
-            color: #e74c3c;
-            font-weight: 500;
-        }
-        .p-marginal {
-            color: #f39c12;
-            font-weight: 500;
-        }
-        .assumption-pass {
-            background-color: rgba(46,204,113,0.15);
-            color: #2ecc71;
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
-            font-weight: 500;
-            font-size: 0.85rem;
-            display: inline-block;
-        }
-        .assumption-fail {
-            background-color: rgba(231,76,60,0.15);
-            color: #e74c3c;
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
-            font-weight: 500;
-            font-size: 0.85rem;
-            display: inline-block;
-        }
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-            font-size: 0.9rem;
-        }
-        .results-table th {
-            background-color: #1a1a2e;
-            color: #e0e0e0;
-            padding: 0.6rem 1rem;
-            text-align: left;
-            font-weight: 500;
-        }
-        .results-table td {
-            padding: 0.5rem 1rem;
-            border-bottom: 1px solid #2a2a4a;
-            color: #e0e0e0;
-        }
-        .results-table tr:nth-child(even) {
-            background-color: rgba(26,26,46,0.5);
-        }
-        .info-box {
-            background-color: rgba(102,126,234,0.1);
-            border-left: 4px solid #667eea;
-            padding: 1rem;
-            border-radius: 0 6px 6px 0;
-            margin: 1rem 0;
-            color: #e0e0e0;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    /* ── Hero Section (home page) ───────────────────────────────── */
+    .hero-section {{
+        text-align: center;
+        padding: 2rem 0 1.5rem 0;
+    }}
+    .hero-badge {{
+        display: inline-block;
+        background: linear-gradient(90deg, {accent_bg_start}, {accent_bg_end});
+        border: 1px solid {accent_border_rgba};
+        border-radius: 20px;
+        padding: 0.3rem 1rem;
+        font-size: 0.85rem;
+        color: {c['accent_primary']};
+        margin-bottom: 1rem;
+    }}
+    .hero-title {{
+        font-size: 3rem;
+        font-weight: 700;
+        background: {accent_grad};
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0.5rem 0;
+        line-height: 1.2;
+    }}
+    .hero-subtitle {{
+        font-size: 1.15rem;
+        color: {c['text_muted']};
+        margin-top: 0.5rem;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+        text-align: center;
+    }}
+
+    /* ── Tool Cards (home page) ─────────────────────────────────── */
+    .tool-card {{
+        background: {card_grad};
+        border-radius: 14px;
+        padding: 1.5rem;
+        border: 1px solid {c['border']};
+        min-height: 180px;
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }}
+    .tool-card:hover {{
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px {accent_shadow};
+        border-color: {c['accent_primary']};
+    }}
+    .tool-card h3 {{
+        margin-top: 0;
+        color: {c['text_bright']};
+        font-size: 1.05rem;
+    }}
+    .tool-card p {{
+        color: {c['text_muted']};
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin-bottom: 0;
+    }}
+    .tool-card-icon {{
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }}
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    .app-footer {{
+        text-align: center;
+        color: {c['footer_text']};
+        font-size: 0.85rem;
+        padding: 2rem 0 1rem 0;
+    }}
+    .app-footer span {{
+        background: {accent_grad};
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 600;
+    }}
+
+    /* ── Statistics Results ──────────────────────────────────────── */
+    .p-significant {{
+        color: {c['success']};
+        font-weight: 700;
+    }}
+    .p-not-significant {{
+        color: {c['error']};
+        font-weight: 500;
+    }}
+    .p-marginal {{
+        color: {c['warning']};
+        font-weight: 500;
+    }}
+    .assumption-pass {{
+        background-color: rgba({_hex_to_rgb(c['success'])},0.15);
+        color: {c['success']};
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 0.85rem;
+        display: inline-block;
+    }}
+    .assumption-fail {{
+        background-color: rgba({_hex_to_rgb(c['error'])},0.15);
+        color: {c['error']};
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 0.85rem;
+        display: inline-block;
+    }}
+    .results-table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: 0.9rem;
+    }}
+    .results-table th {{
+        background-color: {c['bg_card']};
+        color: {c['text_body']};
+        padding: 0.6rem 1rem;
+        text-align: left;
+        font-weight: 500;
+    }}
+    .results-table td {{
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid {c['border']};
+        color: {c['text_body']};
+    }}
+    .results-table tr:nth-child(even) {{
+        background-color: {c['table_even_row']};
+    }}
+    .info-box {{
+        background-color: rgba({_hex_to_rgb(c['accent_primary'])},0.1);
+        border-left: 4px solid {c['accent_primary']};
+        padding: 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1rem 0;
+        color: {c['text_body']};
+    }}
+    </style>
+    """
+
+    # Light-theme overrides for native Streamlit widgets
+    if light:
+        css += f"""
+    <style>
+    /* ── Light Theme — Main Area ───────────────────────────────── */
+    .stApp, [data-testid="stAppViewContainer"] {{
+        background-color: {c['bg_primary']} !important;
+    }}
+    .stApp > header {{
+        background-color: {c['bg_primary']} !important;
+    }}
+    [data-testid="stHeader"] {{
+        background-color: {c['bg_primary']} !important;
+    }}
+
+    /* ── Text colors ────────────────────────────────────────────── */
+    .stApp, .stApp p, .stApp li, .stApp span, .stApp label,
+    .stMarkdown, .stMarkdown p {{
+        color: {c['text_body']} !important;
+    }}
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {{
+        color: {c['text_bright']} !important;
+    }}
+
+    /* ── Sidebar text ───────────────────────────────────────────── */
+    section[data-testid="stSidebar"],
+    section[data-testid="stSidebar"] * {{
+        color: {c['text_body']} !important;
+    }}
+    section[data-testid="stSidebar"] .stRadio label,
+    section[data-testid="stSidebar"] a {{
+        color: {c['text_muted']} !important;
+    }}
+
+    /* ── Inputs ─────────────────────────────────────────────────── */
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div,
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stTextArea textarea {{
+        background-color: {c['bg_card']} !important;
+        color: {c['text_body']} !important;
+        border-color: {c['border']} !important;
+    }}
+
+    /* ── Selectbox dropdown ─────────────────────────────────────── */
+    [data-baseweb="popover"] {{
+        background-color: {c['bg_card']} !important;
+    }}
+    [data-baseweb="menu"] {{
+        background-color: {c['bg_card']} !important;
+    }}
+    [data-baseweb="menu"] li {{
+        color: {c['text_body']} !important;
+    }}
+    [data-baseweb="menu"] li:hover {{
+        background-color: {c['hover_bg']} !important;
+    }}
+
+    /* ── Dataframe ──────────────────────────────────────────────── */
+    [data-testid="stDataFrame"] {{
+        background-color: {c['bg_card']} !important;
+    }}
+    </style>
+    """
+
+    st.markdown(css, unsafe_allow_html=True)
 
 
-# ── Page Header ───────────────────────────────────────────────────────────────
+def _hex_to_rgb(hex_color: str) -> str:
+    """Convert '#RRGGBB' to 'R,G,B' string for use in rgba()."""
+    h = hex_color.lstrip("#")
+    return f"{int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)}"
+
+
+# ── Page Header ──────────────────────────────────────────────────────────────
 
 def page_header(title: str, description: str, icon: str = ""):
     """Render a gradient page title with accent underline and description."""
+    c = get_colors()
     title = html.escape(title)
     description = html.escape(description)
     icon = html.escape(icon)
     icon_html = f'<span style="font-size:2rem;margin-right:0.5rem;">{icon}</span>' if icon else ""
+    accent_grad = f"linear-gradient(90deg,{c['title_gradient_start']} 0%,{c['title_gradient_end']} 100%)"
     st.markdown(
         f"""
         <div style="margin-bottom:1.5rem;">
@@ -410,7 +555,7 @@ def page_header(title: str, description: str, icon: str = ""):
                 <h1 style="
                     font-size:2rem;
                     font-weight:700;
-                    background:linear-gradient(90deg,#667eea 0%,#764ba2 100%);
+                    background:{accent_grad};
                     -webkit-background-clip:text;
                     -webkit-text-fill-color:transparent;
                     margin:0;
@@ -418,61 +563,69 @@ def page_header(title: str, description: str, icon: str = ""):
             </div>
             <div style="
                 width:60px;height:3px;
-                background:linear-gradient(90deg,#667eea,#764ba2);
+                background:{accent_grad};
                 border-radius:2px;
                 margin:0.5rem 0;
             "></div>
-            <p style="color:#a0a0b8;font-size:1rem;margin:0;">{description}</p>
+            <p style="color:{c['text_muted']};font-size:1rem;margin:0;">{description}</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-# ── Metric Card ───────────────────────────────────────────────────────────────
+# ── Metric Card ──────────────────────────────────────────────────────────────
 
 def metric_card(label: str, value: str, icon: str = ""):
     """Render a styled metric card with optional icon."""
+    c = get_colors()
+    light = _is_light()
     label = html.escape(label)
     value = html.escape(value)
     icon = html.escape(icon)
     icon_html = f'<span style="font-size:1.5rem;margin-right:0.5rem;">{icon}</span>' if icon else ""
+    card_grad = f"linear-gradient(135deg,{c['bg_card']} 0%,{c['bg_sidebar']} 100%)" if not light else f"linear-gradient(135deg,{c['bg_card']} 0%,{c['bg_card']} 100%)"
     st.markdown(
         f"""
         <div style="
-            background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
-            border:1px solid #2a2a4a;
+            background:{card_grad};
+            border:1px solid {c['border']};
             border-radius:12px;
             padding:1rem 1.2rem;
             text-align:center;
             transition:transform 0.2s,box-shadow 0.2s;
         ">
             <div>{icon_html}</div>
-            <div style="color:#a0a0b8;font-size:0.85rem;margin-bottom:0.25rem;">{label}</div>
-            <div style="color:#ffffff;font-size:1.5rem;font-weight:700;">{value}</div>
+            <div style="color:{c['text_muted']};font-size:0.85rem;margin-bottom:0.25rem;">{label}</div>
+            <div style="color:{c['text_bright']};font-size:1.5rem;font-weight:700;">{value}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-# ── Matplotlib Dark Theme ────────────────────────────────────────────────────
+# ── Matplotlib Theme ────────────────────────────────────────────────────────
 
-def set_matplotlib_dark():
-    """Configure matplotlib rcParams for dark-themed SHAP/PDP plots."""
+def set_matplotlib_theme():
+    """Configure matplotlib rcParams for the active theme."""
     import matplotlib.pyplot as plt
+    c = get_colors()
 
-    dark_params = {
-        "figure.facecolor": COLORS["bg_primary"],
-        "axes.facecolor": COLORS["bg_primary"],
-        "axes.edgecolor": "#2a2a4a",
-        "axes.labelcolor": COLORS["text_body"],
-        "text.color": COLORS["text_body"],
-        "xtick.color": COLORS["text_muted"],
-        "ytick.color": COLORS["text_muted"],
-        "grid.color": "#2a2a4a",
-        "legend.facecolor": COLORS["bg_card"],
-        "legend.edgecolor": "#2a2a4a",
-        "savefig.facecolor": COLORS["bg_primary"],
+    params = {
+        "figure.facecolor": c["bg_primary"],
+        "axes.facecolor": c["bg_primary"],
+        "axes.edgecolor": c["border"],
+        "axes.labelcolor": c["text_body"],
+        "text.color": c["text_body"],
+        "xtick.color": c["text_muted"],
+        "ytick.color": c["text_muted"],
+        "grid.color": c["border"],
+        "legend.facecolor": c["bg_card"],
+        "legend.edgecolor": c["border"],
+        "savefig.facecolor": c["bg_primary"],
     }
-    plt.rcParams.update(dark_params)
+    plt.rcParams.update(params)
+
+
+# Backwards-compatible alias
+set_matplotlib_dark = set_matplotlib_theme

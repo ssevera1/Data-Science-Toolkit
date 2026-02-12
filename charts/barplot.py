@@ -4,11 +4,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-from charts.theme import apply_theme, COLORS
+from charts.theme import apply_theme, get_chart_colors
 
 
 def group_means_bar(df, value_col, group_col, title=None):
     """Bar chart showing group means with error bars (SE)."""
+    colors = get_chart_colors()
     summary = df.groupby(group_col)[value_col].agg(["mean", "std", "count"]).reset_index()
     summary["se"] = summary["std"] / np.sqrt(summary["count"])
 
@@ -18,7 +19,7 @@ def group_means_bar(df, value_col, group_col, title=None):
             x=[str(row[group_col])],
             y=[row["mean"]],
             error_y=dict(type="data", array=[row["se"]], visible=True),
-            marker_color=COLORS[i % len(COLORS)],
+            marker_color=colors[i % len(colors)],
             name=str(row[group_col]),
         ))
 
@@ -34,6 +35,7 @@ def group_means_bar(df, value_col, group_col, title=None):
 
 def two_way_bar(df, value_col, factor1, factor2, title=None):
     """Grouped bar chart for two-way designs."""
+    colors = get_chart_colors()
     summary = df.groupby([factor1, factor2])[value_col].agg(["mean", "std", "count"]).reset_index()
     summary["se"] = summary["std"] / np.sqrt(summary["count"])
 
@@ -44,7 +46,7 @@ def two_way_bar(df, value_col, factor1, factor2, title=None):
         color=factor2,
         barmode="group",
         error_y="se",
-        color_discrete_sequence=COLORS,
+        color_discrete_sequence=colors,
         title=title or f"Mean {value_col} by {factor1} and {factor2}",
     )
     fig.update_layout(
