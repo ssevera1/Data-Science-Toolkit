@@ -133,10 +133,21 @@ def render():
                 fig.update_layout(height=400)
                 st.plotly_chart(fig, width="stretch")
 
-                if st.button("Accept & Update Dataset"):
-                    st.session_state["df"] = new_df
-                    st.success("Dataset updated with resampled data.")
-                    st.rerun()
+                dl_col, accept_col = st.columns(2)
+                with dl_col:
+                    csv_data = new_df.to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        "Download Resampled CSV",
+                        data=csv_data,
+                        file_name="resampled_data.csv",
+                        mime="text/csv",
+                        width="stretch",
+                    )
+                with accept_col:
+                    if st.button("Accept & Update Dataset", width="stretch"):
+                        st.session_state["df"] = new_df
+                        st.success("Dataset updated with resampled data.")
+                        st.rerun()
 
             except Exception:
                 st.error("Resampling failed. Please check that the target column and features are suitable for the selected method.")
