@@ -124,6 +124,14 @@ def render():
             st.plotly_chart(fig, width="stretch")
 
             st.dataframe(imp_df, width="stretch", hide_index=True)
+
+            csv_data = imp_df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download Importance CSV",
+                data=csv_data,
+                file_name="feature_importance.csv",
+                mime="text/csv",
+            )
         else:
             st.info("This model does not have built-in feature importances. Check SHAP tab.")
 
@@ -194,6 +202,14 @@ def render():
                 fig.update_layout(height=max(400, len(feature_cols) * 25),
                                   yaxis=dict(autorange="reversed"))
                 st.plotly_chart(fig, width="stretch")
+
+                shap_csv = shap_df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "Download SHAP Summary CSV",
+                    data=shap_csv,
+                    file_name="shap_importance.csv",
+                    mime="text/csv",
+                )
 
                 # Beeswarm / scatter
                 st.markdown("#### SHAP Beeswarm Plot")

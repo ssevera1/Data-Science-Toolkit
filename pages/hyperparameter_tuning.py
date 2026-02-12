@@ -243,6 +243,29 @@ def render():
         except Exception:
             pass
 
+        # Download trial history
+        st.markdown("#### Export")
+        dl1, dl2 = st.columns(2)
+        with dl1:
+            hist_csv = hist_df.drop(columns=["params"], errors="ignore").to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download Trial History CSV",
+                data=hist_csv,
+                file_name="tuning_trial_history.csv",
+                mime="text/csv",
+                width="stretch",
+            )
+        with dl2:
+            import json
+            params_json = json.dumps(best_params, indent=2).encode("utf-8")
+            st.download_button(
+                "Download Best Params JSON",
+                data=params_json,
+                file_name="best_hyperparameters.json",
+                mime="application/json",
+                width="stretch",
+            )
+
         # Store best params
         st.session_state["best_params"] = best_params
         st.session_state["tuned_model"] = model_choice

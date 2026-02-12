@@ -151,6 +151,14 @@ def render():
             st.dataframe(drift_df.style.apply(highlight_drift, axis=1),
                          width="stretch", hide_index=True)
 
+            drift_csv = drift_df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download Numeric Drift CSV",
+                data=drift_csv,
+                file_name="numeric_drift_results.csv",
+                mime="text/csv",
+            )
+
             # PSI interpretation
             st.markdown("""
             **PSI Interpretation:**
@@ -190,6 +198,14 @@ def render():
 
             cat_df = pd.DataFrame(cat_results).sort_values("Chi2 p-value")
             st.dataframe(cat_df, width="stretch", hide_index=True)
+
+            cat_csv = cat_df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download Categorical Drift CSV",
+                data=cat_csv,
+                file_name="categorical_drift_results.csv",
+                mime="text/csv",
+            )
 
     with tab_viz:
         st.subheader("Distribution Comparison")

@@ -166,6 +166,14 @@ def render():
 
             st.dataframe(summary, width="stretch")
 
+            csv_data = summary.to_csv().encode("utf-8")
+            st.download_button(
+                "Download Rankings CSV",
+                data=csv_data,
+                file_name="feature_rankings.csv",
+                mime="text/csv",
+            )
+
             # Allow user to select and apply
             st.divider()
             top_n = st.slider("Keep top N features", 1, len(feature_cols), max(1, len(feature_cols) // 2),
@@ -173,10 +181,22 @@ def render():
             top_features = summary.index[:top_n].tolist()
             st.write(f"Top {top_n} features: {top_features}")
 
-            if st.button("Apply: Keep only selected features + target"):
-                keep = top_features + [target_col]
-                st.session_state["df"] = df[keep]
-                st.success(f"Reduced to {len(keep)} columns.")
+            dl_col, apply_col = st.columns(2)
+            with dl_col:
+                selected_df = df[top_features + [target_col]]
+                sel_csv = selected_df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "Download Selected Features CSV",
+                    data=sel_csv,
+                    file_name="selected_features.csv",
+                    mime="text/csv",
+                    width="stretch",
+                )
+            with apply_col:
+                if st.button("Apply: Keep only selected features + target", width="stretch"):
+                    keep = top_features + [target_col]
+                    st.session_state["df"] = df[keep]
+                    st.success(f"Reduced to {len(keep)} columns.")
         else:
             st.info("Run the methods above to populate this summary.")
 

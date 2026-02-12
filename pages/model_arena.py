@@ -250,6 +250,14 @@ def render():
             st.subheader("Results")
             st.dataframe(res_df, width="stretch", hide_index=True)
 
+            csv_data = res_df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download Results CSV",
+                data=csv_data,
+                file_name="model_arena_results.csv",
+                mime="text/csv",
+            )
+
             # Primary metric chart
             if task == "Classification" and is_binary:
                 primary = "Roc Auc"
