@@ -91,43 +91,53 @@ from pages import chi_squared_test
 from pages import binomial_test
 
 # Navigation with collapsible sections
+def _page(func, title, url_path, icon, **kwargs):
+    """Create a st.Page and register it in the page map for card navigation."""
+    p = st.Page(func, title=title, icon=icon, url_path=url_path, **kwargs)
+    _page_map[url_path] = p
+    return p
+
+_page_map = {}
+
 pages = {
     "": [
-        st.Page(home.render, title="Home", icon="⚡", default=True, url_path="home"),
+        _page(home.render, "Home", "home", "⚡", default=True),
     ],
     "Data Science Tools": [
-        st.Page(data_profiler.render, title="Data Profiler", icon="📊", url_path="data-profiler"),
-        st.Page(smart_cleaning.render, title="Smart Cleaning", icon="🧹", url_path="smart-cleaning"),
-        st.Page(feature_engineering.render, title="Feature Engineering", icon="🔧", url_path="feature-engineering"),
-        st.Page(feature_selection.render, title="Feature Selection", icon="🎯", url_path="feature-selection"),
-        st.Page(class_imbalance.render, title="Class Imbalance", icon="⚖️", url_path="class-imbalance"),
-        st.Page(model_arena.render, title="Model Arena", icon="🏟️", url_path="model-arena"),
-        st.Page(hyperparameter_tuning.render, title="Hyperparameter Tuning", icon="🎛️", url_path="hyperparameter-tuning"),
-        st.Page(explainability.render, title="Explainability", icon="🔍", url_path="explainability"),
-        st.Page(data_drift.render, title="Data Drift", icon="📈", url_path="data-drift"),
+        _page(data_profiler.render, "Data Profiler", "data-profiler", "📊"),
+        _page(smart_cleaning.render, "Smart Cleaning", "smart-cleaning", "🧹"),
+        _page(feature_engineering.render, "Feature Engineering", "feature-engineering", "🔧"),
+        _page(feature_selection.render, "Feature Selection", "feature-selection", "🎯"),
+        _page(class_imbalance.render, "Class Imbalance", "class-imbalance", "⚖️"),
+        _page(model_arena.render, "Model Arena", "model-arena", "🏟️"),
+        _page(hyperparameter_tuning.render, "Hyperparameter Tuning", "hyperparameter-tuning", "🎛️"),
+        _page(explainability.render, "Explainability", "explainability", "🔍"),
+        _page(data_drift.render, "Data Drift", "data-drift", "📈"),
     ],
     "Statistics Tools": [
-        st.Page(data_input.render, title="Data Input", icon="📋", url_path="stats-data-input"),
-        st.Page(descriptive_stats.render, title="Descriptive Statistics", icon="📈", url_path="descriptive"),
-        st.Page(one_sample_ttest.render, title="One-Sample t-Test", icon="1️⃣", url_path="one-sample-ttest"),
-        st.Page(independent_ttest.render, title="Independent t-Test", icon="↔️", url_path="independent-ttest"),
-        st.Page(paired_ttest.render, title="Paired t-Test", icon="🔗", url_path="paired-ttest"),
-        st.Page(oneway_anova.render, title="One-Way ANOVA", icon="📊", url_path="oneway-anova"),
-        st.Page(twoway_anova.render, title="Two-Way ANOVA", icon="📊", url_path="twoway-anova"),
-        st.Page(repeated_anova.render, title="Repeated Measures ANOVA", icon="🔄", url_path="repeated-anova"),
-        st.Page(mixed_anova.render, title="Mixed ANOVA", icon="🔀", url_path="mixed-anova"),
-        st.Page(mann_whitney.render, title="Mann-Whitney U", icon="📉", url_path="mann-whitney"),
-        st.Page(wilcoxon.render, title="Wilcoxon Signed-Rank", icon="📉", url_path="wilcoxon"),
-        st.Page(kruskal_wallis.render, title="Kruskal-Wallis", icon="📉", url_path="kruskal-wallis"),
-        st.Page(friedman.render, title="Friedman Test", icon="📉", url_path="friedman"),
-        st.Page(pearson_correlation.render, title="Pearson Correlation", icon="🔵", url_path="pearson"),
-        st.Page(spearman_correlation.render, title="Spearman Correlation", icon="🔵", url_path="spearman"),
-        st.Page(linear_regression.render, title="Linear Regression", icon="📐", url_path="linear-regression"),
-        st.Page(logistic_regression.render, title="Logistic Regression", icon="📐", url_path="logistic-regression"),
-        st.Page(chi_squared_test.render, title="Chi-Squared Test", icon="🔲", url_path="chi-squared"),
-        st.Page(binomial_test.render, title="Binomial Test", icon="🎯", url_path="binomial"),
+        _page(data_input.render, "Data Input", "stats-data-input", "📋"),
+        _page(descriptive_stats.render, "Descriptive Statistics", "descriptive", "📈"),
+        _page(one_sample_ttest.render, "One-Sample t-Test", "one-sample-ttest", "1️⃣"),
+        _page(independent_ttest.render, "Independent t-Test", "independent-ttest", "↔️"),
+        _page(paired_ttest.render, "Paired t-Test", "paired-ttest", "🔗"),
+        _page(oneway_anova.render, "One-Way ANOVA", "oneway-anova", "📊"),
+        _page(twoway_anova.render, "Two-Way ANOVA", "twoway-anova", "📊"),
+        _page(repeated_anova.render, "Repeated Measures ANOVA", "repeated-anova", "🔄"),
+        _page(mixed_anova.render, "Mixed ANOVA", "mixed-anova", "🔀"),
+        _page(mann_whitney.render, "Mann-Whitney U", "mann-whitney", "📉"),
+        _page(wilcoxon.render, "Wilcoxon Signed-Rank", "wilcoxon", "📉"),
+        _page(kruskal_wallis.render, "Kruskal-Wallis", "kruskal-wallis", "📉"),
+        _page(friedman.render, "Friedman Test", "friedman", "📉"),
+        _page(pearson_correlation.render, "Pearson Correlation", "pearson", "🔵"),
+        _page(spearman_correlation.render, "Spearman Correlation", "spearman", "🔵"),
+        _page(linear_regression.render, "Linear Regression", "linear-regression", "📐"),
+        _page(logistic_regression.render, "Logistic Regression", "logistic-regression", "📐"),
+        _page(chi_squared_test.render, "Chi-Squared Test", "chi-squared", "🔲"),
+        _page(binomial_test.render, "Binomial Test", "binomial", "🎯"),
     ],
 }
+
+st.session_state["_page_map"] = _page_map
 
 nav = st.navigation(pages)
 nav.run()
