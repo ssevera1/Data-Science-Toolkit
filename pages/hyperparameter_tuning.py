@@ -208,7 +208,7 @@ def render():
                                  mode="lines", name="Best So Far",
                                  line=dict(color="red", width=2)))
         fig.update_layout(height=400, xaxis_title="Trial", yaxis_title=primary_metric.title())
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         # Parameter importance
         st.markdown("#### Parameter Importance")
@@ -221,7 +221,7 @@ def render():
             fig = px.bar(imp_df, x="Importance", y="Parameter", orientation="h",
                          color="Importance", color_continuous_scale="Viridis")
             fig.update_layout(height=400, yaxis=dict(autorange="reversed"))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         except Exception:
             st.info("Parameter importance not available for this study.")
 
@@ -239,7 +239,7 @@ def render():
                     color_continuous_scale="Viridis",
                 )
                 fig.update_layout(height=500)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
         except Exception:
             pass
 

@@ -89,7 +89,7 @@ def render():
     edited_df = st.data_editor(
         df,
         num_rows="dynamic",
-        use_container_width=True,
+        width="stretch",
         key="data_editor",
     )
 

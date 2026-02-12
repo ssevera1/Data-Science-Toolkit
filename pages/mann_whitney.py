@@ -59,13 +59,13 @@ def render():
                 "N": [result["n1"], result["n2"]],
                 "Median": [result["median1"], result["median2"]],
             })
-            st.dataframe(group_stats, use_container_width=True, hide_index=True)
+            st.dataframe(group_stats, width="stretch", hide_index=True)
 
             render_effect_size("Rank-biserial correlation", result["rank_biserial"])
 
         with tab_chart:
             fig = grouped_boxplot(clean, dv, group)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

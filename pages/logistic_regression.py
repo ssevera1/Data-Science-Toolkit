@@ -54,7 +54,7 @@ def render():
             cols[3].metric("AIC", f"{result['aic']:.1f}")
 
             st.markdown("### Coefficients")
-            st.dataframe(result["coef_table"], use_container_width=True, hide_index=True)
+            st.dataframe(result["coef_table"], width="stretch", hide_index=True)
 
             st.markdown("*OR = Odds Ratio; CI = Confidence Interval for Odds Ratio*")
 
@@ -89,7 +89,7 @@ def render():
                     xaxis_title=predictors[0],
                     yaxis_title=f"P({dv} = 1)",
                 )
-                st.plotly_chart(apply_theme(fig), use_container_width=True)
+                st.plotly_chart(apply_theme(fig), width="stretch")
             else:
                 # Confusion-style summary
                 st.markdown("### Classification Summary")

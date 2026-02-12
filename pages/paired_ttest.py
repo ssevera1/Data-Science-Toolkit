@@ -79,11 +79,11 @@ def render():
                 clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
                 clean = clean.dropna()
                 fig = paired_boxplot(clean, var1, var2)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             with c2:
                 diff = clean[var1] - clean[var2]
                 fig = qq_plot(diff, "Differences")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

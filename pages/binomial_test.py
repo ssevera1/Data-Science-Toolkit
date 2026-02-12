@@ -77,7 +77,7 @@ def render():
                 xaxis_title=var,
                 yaxis_title="Count",
             )
-            st.plotly_chart(apply_theme(fig), use_container_width=True)
+            st.plotly_chart(apply_theme(fig), width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

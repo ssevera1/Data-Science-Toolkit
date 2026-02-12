@@ -40,9 +40,18 @@ def render():
     accent_bg_start = f"rgba({_hex_to_rgb(c['title_gradient_start'])},0.12)"
     accent_bg_end = f"rgba({_hex_to_rgb(c['title_gradient_end'])},0.08)"
     accent_border = f"rgba({_hex_to_rgb(c['accent_primary'])},0.3)"
-    accent_shadow = f"rgba({_hex_to_rgb(c['accent_primary'])},0.25)"
 
     # ── Hero Section ──────────────────────────────────────────────────────
+    # Hero image — change the path below to display your own logo/banner.
+    # See README.md "Customizing the Hero Image" for details.
+    HERO_IMAGE = "assets/hero.png"
+
+    import os
+    if os.path.exists(HERO_IMAGE):
+        _hero_col1, _hero_col2, _hero_col3 = st.columns([1, 2, 1])
+        with _hero_col2:
+            st.image(HERO_IMAGE, width="stretch")
+
     st.markdown(
         f"""
         <div style="text-align:center;padding:2rem 0 1.5rem 0;">
@@ -144,7 +153,7 @@ def render():
             st.metric("Missing %", f"{missing_pct:.1f}%")
 
         with st.expander("Preview Data", expanded=True):
-            st.dataframe(df.head(50), use_container_width=True, height=300)
+            st.dataframe(df.head(50), width="stretch", height=300)
 
         with st.expander("Column Types & Info"):
             info_df = pd.DataFrame({
@@ -155,7 +164,7 @@ def render():
                 "Null %": (df.isnull().sum().values / len(df) * 100).round(2),
                 "Unique": df.nunique().values,
             })
-            st.dataframe(info_df, use_container_width=True, hide_index=True)
+            st.dataframe(info_df, width="stretch", hide_index=True)
 
         st.divider()
 
@@ -163,47 +172,27 @@ def render():
     st.subheader("Available Tools")
     st.caption("Upload data above, then navigate to any tool from the sidebar.")
 
-    # Card link hover style
-    st.markdown(f"""
-        <style>
-        a.tool-card {{
-            text-decoration:none !important;
-            display:block;
-        }}
-        a.tool-card > div {{
-            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-        }}
-        a.tool-card:hover > div {{
-            border-color: {c['accent_primary']} !important;
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px {accent_shadow};
-        }}
-        </style>
-    """, unsafe_allow_html=True)
-
     st.markdown("#### Data Science Tools")
     ds_tools = [
-        ("📊", "Data Profiler", "Deep automated EDA — distributions, correlations, anomalies, missing patterns.", "data-profiler"),
-        ("🧹", "Smart Cleaning", "One-click missing value imputation, outlier treatment, encoding, deduplication.", "smart-cleaning"),
-        ("🔧", "Feature Engineering", "Auto-generate polynomial, interaction, datetime & binned features.", "feature-engineering"),
-        ("🎯", "Feature Selection", "Correlation filters, mutual info, variance threshold, RFE — ranked results.", "feature-selection"),
-        ("⚖️", "Class Imbalance", "Detect skew, apply SMOTE / random over/under-sampling, compare distributions.", "class-imbalance"),
-        ("🏟️", "Model Arena", "Benchmark 10+ algorithms side-by-side with proper cross-validation.", "model-arena"),
-        ("🎛️", "Hyperparameter Tuning", "Bayesian optimization via Optuna with live trial visualizations.", "hyperparameter-tuning"),
-        ("🔍", "Explainability", "SHAP values, feature importance, partial dependence — for any model.", "explainability"),
-        ("📈", "Data Drift", "Upload a reference & current dataset — detect drift with statistical tests.", "data-drift"),
+        ("📊", "Data Profiler", "Deep automated EDA — distributions, correlations, anomalies, missing patterns."),
+        ("🧹", "Smart Cleaning", "One-click missing value imputation, outlier treatment, encoding, deduplication."),
+        ("🔧", "Feature Engineering", "Auto-generate polynomial, interaction, datetime & binned features."),
+        ("🎯", "Feature Selection", "Correlation filters, mutual info, variance threshold, RFE — ranked results."),
+        ("⚖️", "Class Imbalance", "Detect skew, apply SMOTE / random over/under-sampling, compare distributions."),
+        ("🏟️", "Model Arena", "Benchmark 10+ algorithms side-by-side with proper cross-validation."),
+        ("🎛️", "Hyperparameter Tuning", "Bayesian optimization via Optuna with live trial visualizations."),
+        ("🔍", "Explainability", "SHAP values, feature importance, partial dependence — for any model."),
+        ("📈", "Data Drift", "Upload a reference & current dataset — detect drift with statistical tests."),
     ]
 
     cards_html = ""
-    for icon, title, desc, url in ds_tools:
+    for icon, title, desc in ds_tools:
         cards_html += f"""
-        <a href="/{url}" target="_self" class="tool-card">
-        <div style="background:{card_grad};border-radius:14px;padding:1.5rem;border:1px solid {c['border']};">
+        <div style="background:{card_grad};border-radius:14px;padding:1.5rem;border:1px solid {c['border']};transition:transform 0.2s,box-shadow 0.2s;">
             <span style="font-size:1.8rem;display:block;margin-bottom:0.5rem;">{icon}</span>
             <h3 style="margin-top:0;color:{c['text_bright']};font-size:1.05rem;">{title}</h3>
             <p style="color:{c['text_muted']};font-size:0.9rem;line-height:1.5;margin-bottom:0;">{desc}</p>
-        </div>
-        </a>"""
+        </div>"""
 
     st.markdown(
         f'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">{cards_html}</div>',
@@ -212,37 +201,35 @@ def render():
 
     st.markdown("#### Statistics Tools")
     stats_tools = [
-        ("📋", "Data Input", "Enter data manually, upload CSV/Excel, or paste from a spreadsheet.", "stats-data-input"),
-        ("📈", "Descriptive Stats", "Mean, median, standard deviation, skewness, kurtosis, and more.", "descriptive"),
-        ("1️⃣", "One-Sample t-Test", "Test whether a sample mean differs from a hypothesized value.", "one-sample-ttest"),
-        ("↔️", "Independent t-Test", "Compare means between two independent groups.", "independent-ttest"),
-        ("🔗", "Paired t-Test", "Compare means of two related measurements.", "paired-ttest"),
-        ("📊", "One-Way ANOVA", "Compare means across three or more independent groups.", "oneway-anova"),
-        ("📊", "Two-Way ANOVA", "Test effects of two factors and their interaction.", "twoway-anova"),
-        ("🔄", "Repeated Measures ANOVA", "Compare means across related conditions (within-subjects).", "repeated-anova"),
-        ("🔀", "Mixed ANOVA", "Test within-subjects and between-subjects factors together.", "mixed-anova"),
-        ("📉", "Mann-Whitney U", "Non-parametric alternative to the independent t-test.", "mann-whitney"),
-        ("📉", "Wilcoxon Signed-Rank", "Non-parametric alternative to the paired t-test.", "wilcoxon"),
-        ("📉", "Kruskal-Wallis", "Non-parametric alternative to one-way ANOVA.", "kruskal-wallis"),
-        ("📉", "Friedman Test", "Non-parametric alternative to repeated measures ANOVA.", "friedman"),
-        ("🔵", "Pearson Correlation", "Measure the linear relationship between two variables.", "pearson"),
-        ("🔵", "Spearman Correlation", "Measure the monotonic relationship using ranks.", "spearman"),
-        ("📐", "Linear Regression", "Predict a continuous outcome from predictors (OLS).", "linear-regression"),
-        ("📐", "Logistic Regression", "Predict a binary outcome from predictors.", "logistic-regression"),
-        ("🔲", "Chi-Squared Test", "Test association between two categorical variables.", "chi-squared"),
-        ("🎯", "Binomial Test", "Test whether a proportion matches a hypothesized value.", "binomial"),
+        ("📋", "Data Input", "Enter data manually, upload CSV/Excel, or paste from a spreadsheet."),
+        ("📈", "Descriptive Stats", "Mean, median, standard deviation, skewness, kurtosis, and more."),
+        ("1️⃣", "One-Sample t-Test", "Test whether a sample mean differs from a hypothesized value."),
+        ("↔️", "Independent t-Test", "Compare means between two independent groups."),
+        ("🔗", "Paired t-Test", "Compare means of two related measurements."),
+        ("📊", "One-Way ANOVA", "Compare means across three or more independent groups."),
+        ("📊", "Two-Way ANOVA", "Test effects of two factors and their interaction."),
+        ("🔄", "Repeated Measures ANOVA", "Compare means across related conditions (within-subjects)."),
+        ("🔀", "Mixed ANOVA", "Test within-subjects and between-subjects factors together."),
+        ("📉", "Mann-Whitney U", "Non-parametric alternative to the independent t-test."),
+        ("📉", "Wilcoxon Signed-Rank", "Non-parametric alternative to the paired t-test."),
+        ("📉", "Kruskal-Wallis", "Non-parametric alternative to one-way ANOVA."),
+        ("📉", "Friedman Test", "Non-parametric alternative to repeated measures ANOVA."),
+        ("🔵", "Pearson Correlation", "Measure the linear relationship between two variables."),
+        ("🔵", "Spearman Correlation", "Measure the monotonic relationship using ranks."),
+        ("📐", "Linear Regression", "Predict a continuous outcome from predictors (OLS)."),
+        ("📐", "Logistic Regression", "Predict a binary outcome from predictors."),
+        ("🔲", "Chi-Squared Test", "Test association between two categorical variables."),
+        ("🎯", "Binomial Test", "Test whether a proportion matches a hypothesized value."),
     ]
 
     cards_html = ""
-    for icon, title, desc, url in stats_tools:
+    for icon, title, desc in stats_tools:
         cards_html += f"""
-        <a href="/{url}" target="_self" class="tool-card">
-        <div style="background:{card_grad};border-radius:14px;padding:1.5rem;border:1px solid {c['border']};">
+        <div style="background:{card_grad};border-radius:14px;padding:1.5rem;border:1px solid {c['border']};transition:transform 0.2s,box-shadow 0.2s;">
             <span style="font-size:1.8rem;display:block;margin-bottom:0.5rem;">{icon}</span>
             <h3 style="margin-top:0;color:{c['text_bright']};font-size:1.05rem;">{title}</h3>
             <p style="color:{c['text_muted']};font-size:0.9rem;line-height:1.5;margin-bottom:0;">{desc}</p>
-        </div>
-        </a>"""
+        </div>"""
 
     st.markdown(
         f'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">{cards_html}</div>',

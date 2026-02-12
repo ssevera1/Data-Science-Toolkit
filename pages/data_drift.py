@@ -149,7 +149,7 @@ def render():
                 return [""] * len(row)
 
             st.dataframe(drift_df.style.apply(highlight_drift, axis=1),
-                         use_container_width=True, hide_index=True)
+                         width="stretch", hide_index=True)
 
             # PSI interpretation
             st.markdown("""
@@ -189,7 +189,7 @@ def render():
                 })
 
             cat_df = pd.DataFrame(cat_results).sort_values("Chi2 p-value")
-            st.dataframe(cat_df, use_container_width=True, hide_index=True)
+            st.dataframe(cat_df, width="stretch", hide_index=True)
 
     with tab_viz:
         st.subheader("Distribution Comparison")
@@ -205,7 +205,7 @@ def render():
                     fig.add_trace(go.Histogram(x=cur_df[col].dropna(), name="Current",
                                                opacity=0.6, marker_color=_dc["error"]))
                     fig.update_layout(barmode="overlay", title=col, height=350)
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width="stretch")
 
         if common_cat_cols:
             sel_cat = st.multiselect("Categorical features to compare", common_cat_cols,
@@ -222,7 +222,7 @@ def render():
                 fig = px.bar(combined, x=col, y="Count", color="Source", barmode="group",
                              title=col, color_discrete_map={"Reference": _dc2["info"], "Current": _dc2["error"]})
                 fig.update_layout(height=400)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

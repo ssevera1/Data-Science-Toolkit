@@ -248,7 +248,7 @@ def render():
 
             # Highlight best
             st.subheader("Results")
-            st.dataframe(res_df, use_container_width=True, hide_index=True)
+            st.dataframe(res_df, width="stretch", hide_index=True)
 
             # Primary metric chart
             if task == "Classification" and is_binary:
@@ -264,7 +264,7 @@ def render():
                              color_continuous_scale="Viridis", text_auto=".4f",
                              title=f"Model Comparison — {primary}")
                 fig.update_layout(height=450)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
                 best = valid.iloc[0]
                 st.success(f"Best model: **{best['Model']}** with {primary} = {best[primary]:.4f}")
@@ -291,7 +291,7 @@ def render():
                         height=500,
                         title="Top 5 Models — Radar Chart",
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width="stretch")
 
             # Store best model info
             if primary in res_df.columns:

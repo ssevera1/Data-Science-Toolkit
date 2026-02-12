@@ -35,14 +35,14 @@ def render():
         c4.metric("Memory", f"{mem / 1024**2:.2f} MB")
 
         st.markdown("#### Descriptive Statistics")
-        st.dataframe(df.describe(include="all").T, use_container_width=True)
+        st.dataframe(df.describe(include="all").T, width="stretch")
 
         st.markdown("#### Column Types")
         type_counts = df.dtypes.astype(str).value_counts().reset_index()
         type_counts.columns = ["Type", "Count"]
         fig = px.bar(type_counts, x="Type", y="Count", color="Type", text_auto=True)
         fig.update_layout(showlegend=False, height=300)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     # ── Distributions ──────────────────────────────────────────────────────────
     with tab_dist:
@@ -63,7 +63,7 @@ def render():
                         row=r + 1, col=c + 1,
                     )
                 fig.update_layout(height=300 * nrows)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
         else:
             st.info("No numeric columns found.")
 
@@ -75,7 +75,7 @@ def render():
                 vc.columns = [col, "count"]
                 fig = px.bar(vc, x=col, y="count", title=col, text_auto=True)
                 fig.update_layout(height=350)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
         else:
             st.info("No categorical columns found.")
 
@@ -95,7 +95,7 @@ def render():
                 aspect="auto",
             )
             fig.update_layout(height=600)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             st.markdown("#### Highly Correlated Pairs (|r| > 0.8)")
             pairs = []
@@ -109,7 +109,7 @@ def render():
                             "Correlation": round(val, 4),
                         })
             if pairs:
-                st.dataframe(pd.DataFrame(pairs), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(pairs), width="stretch", hide_index=True)
             else:
                 st.success("No highly correlated pairs found (|r| > 0.8).")
         else:
@@ -129,12 +129,12 @@ def render():
                 "Missing": miss.values,
                 "% Missing": (miss.values / len(df) * 100).round(2),
             })
-            st.dataframe(miss_df, use_container_width=True, hide_index=True)
+            st.dataframe(miss_df, width="stretch", hide_index=True)
 
             fig = px.bar(miss_df, x="Column", y="% Missing", color="% Missing",
                          color_continuous_scale="Reds", text_auto=".1f")
             fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             # Missing value heatmap (sample if large)
             st.markdown("#### Missing Value Pattern")
@@ -146,7 +146,7 @@ def render():
                 labels=dict(color="Missing"),
             )
             fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # ── Outliers ───────────────────────────────────────────────────────────────
     with tab_outliers:
@@ -173,13 +173,13 @@ def render():
                     "% Outliers": round(n_outliers / len(df) * 100, 2),
                 })
             out_df = pd.DataFrame(outlier_summary)
-            st.dataframe(out_df, use_container_width=True, hide_index=True)
+            st.dataframe(out_df, width="stretch", hide_index=True)
 
             sel_box = st.multiselect("Box plots for", num_cols, default=num_cols[:6])
             if sel_box:
                 fig = px.box(df[sel_box].melt(), x="variable", y="value", color="variable")
                 fig.update_layout(height=500, showlegend=False)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
         else:
             st.info("No numeric columns found.")
 

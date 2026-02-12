@@ -74,7 +74,7 @@ def render():
         fig = px.bar(corr_df, x="Abs Correlation", y="Feature", orientation="h",
                      color="Abs Correlation", color_continuous_scale="Viridis")
         fig.update_layout(height=max(400, len(feature_cols) * 25), yaxis=dict(autorange="reversed"))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         threshold = st.slider("Drop features with |corr| below", 0.0, 1.0, 0.05, 0.01)
         kept = corr_scores[corr_scores >= threshold].index.tolist()
@@ -96,7 +96,7 @@ def render():
         fig = px.bar(mi_df, x="MI Score", y="Feature", orientation="h",
                      color="MI Score", color_continuous_scale="Plasma")
         fig.update_layout(height=max(400, len(feature_cols) * 25), yaxis=dict(autorange="reversed"))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     # ── Variance Threshold ────────────────────────────────────────────────────
     with tab_var:
@@ -110,7 +110,7 @@ def render():
         fig = px.bar(var_df, x="Variance", y="Feature", orientation="h",
                      color="Variance", color_continuous_scale="Cividis")
         fig.update_layout(height=max(400, len(feature_cols) * 25), yaxis=dict(autorange="reversed"))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         thresh = st.number_input("Variance threshold", 0.0, float(variances.max()), 0.01, 0.01)
         low_var = variances[variances < thresh].index.tolist()
@@ -142,7 +142,7 @@ def render():
 
                 results["RFE Rank"] = rfe_df.set_index("Feature")["Ranking"]
 
-                st.dataframe(rfe_df, use_container_width=True, hide_index=True)
+                st.dataframe(rfe_df, width="stretch", hide_index=True)
                 selected = rfe_df[rfe_df["Selected"]]["Feature"].tolist()
                 st.success(f"Selected features: {selected}")
 
@@ -164,7 +164,7 @@ def render():
                 summary["Avg Rank Score"] = summary[norm_cols].mean(axis=1)
                 summary = summary.sort_values("Avg Rank Score", ascending=False)
 
-            st.dataframe(summary, use_container_width=True)
+            st.dataframe(summary, width="stretch")
 
             # Allow user to select and apply
             st.divider()

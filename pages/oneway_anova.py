@@ -55,17 +55,17 @@ def render():
             st.markdown("---")
 
             st.markdown("**ANOVA Table**")
-            st.dataframe(result["anova_table"], use_container_width=True, hide_index=True)
+            st.dataframe(result["anova_table"], width="stretch", hide_index=True)
 
             st.markdown("**Group Descriptives**")
-            st.dataframe(result["group_desc"], use_container_width=True, hide_index=True)
+            st.dataframe(result["group_desc"], width="stretch", hide_index=True)
 
             render_effect_size("η² (Eta-squared)", result["eta_squared"], interpret_eta_squared(result["eta_squared"]))
             render_effect_size("ω² (Omega-squared)", result["omega_squared"], interpret_eta_squared(result["omega_squared"]))
 
             if result["posthoc"] is not None:
                 st.markdown("### Post-Hoc Tests (Tukey HSD)")
-                st.dataframe(result["posthoc"], use_container_width=True, hide_index=True)
+                st.dataframe(result["posthoc"], width="stretch", hide_index=True)
 
         with tab_assume:
             st.markdown("**Normality (Shapiro-Wilk per group)**")
@@ -85,10 +85,10 @@ def render():
             c1, c2 = st.columns(2)
             with c1:
                 fig = grouped_boxplot(clean, dv, group)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             with c2:
                 fig = group_means_bar(clean, dv, group)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

@@ -50,17 +50,17 @@ def render():
             st.markdown("---")
 
             st.markdown("**Group Descriptives**")
-            st.dataframe(result["group_desc"], use_container_width=True, hide_index=True)
+            st.dataframe(result["group_desc"], width="stretch", hide_index=True)
 
             render_effect_size("ε² (Epsilon-squared)", result["epsilon_squared"])
 
             if result["posthoc"] is not None:
                 st.markdown("### Post-Hoc Pairwise Comparisons (Bonferroni)")
-                st.dataframe(result["posthoc"], use_container_width=True, hide_index=True)
+                st.dataframe(result["posthoc"], width="stretch", hide_index=True)
 
         with tab_chart:
             fig = grouped_boxplot(clean, dv, group)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

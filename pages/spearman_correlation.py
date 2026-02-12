@@ -65,7 +65,7 @@ def render():
             clean = clean.dropna()
 
             fig = correlation_scatter(clean, var1, var2, r_value=result["rho"])
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

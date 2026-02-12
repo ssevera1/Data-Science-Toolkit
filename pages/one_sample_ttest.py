@@ -71,10 +71,10 @@ def render():
                 fig = single_boxplot(series, var, title=f"{var} (μ₀ = {test_value})")
                 fig.add_hline(y=test_value, line_dash="dash", line_color="red",
                              annotation_text=f"μ₀ = {test_value}")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             with c2:
                 fig = qq_plot(series, var)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

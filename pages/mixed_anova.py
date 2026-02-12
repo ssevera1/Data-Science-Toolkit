@@ -45,7 +45,7 @@ def render():
         with tab_res:
             st.markdown("### ANOVA Table")
             aov = result["anova_table"]
-            st.dataframe(aov, use_container_width=True, hide_index=True)
+            st.dataframe(aov, width="stretch", hide_index=True)
 
             for _, row in aov.iterrows():
                 source = row.get("Source", "")
@@ -55,11 +55,11 @@ def render():
                     st.markdown(f"**{source}:** F = {row.get('F', 0):.4f}, p = {p:.4f} — {sig}")
 
             st.markdown("### Group Descriptives")
-            st.dataframe(result["group_desc"], use_container_width=True, hide_index=True)
+            st.dataframe(result["group_desc"], width="stretch", hide_index=True)
 
         with tab_chart:
             fig = two_way_bar(clean, dv, within, between)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

@@ -75,6 +75,26 @@ The app opens at `http://localhost:8501`.
 
 ---
 
+## Customizing the Hero Image
+
+To display a logo or banner on the Home page, place an image file at:
+
+```
+assets/hero.png
+```
+
+The image will appear centered above the title and automatically resize to fit. Supported formats: PNG, JPG, GIF, SVG.
+
+To change the path, edit the `HERO_IMAGE` variable near the top of the `render()` function in `pages/home.py` (around line 48):
+
+```python
+HERO_IMAGE = "assets/hero.png"  # Change this to your image path
+```
+
+If no file exists at the specified path, the image section is simply hidden.
+
+---
+
 ## How It Works
 
 - **Data Science tools** — Upload a CSV or Excel file on the Home page (up to 200 MB). Your dataset persists across all DS tool pages via the sidebar navigation.

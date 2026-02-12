@@ -175,7 +175,7 @@ def render():
 
         if n_dups > 0:
             st.write("Preview of duplicates:")
-            st.dataframe(df[df.duplicated(keep=False)].head(20), use_container_width=True)
+            st.dataframe(df[df.duplicated(keep=False)].head(20), width="stretch")
             keep = st.selectbox("Keep", ["first", "last"])
             if st.button("Remove Duplicates"):
                 df = df.drop_duplicates(keep=keep)

@@ -37,14 +37,14 @@ def render():
             if metric_vars:
                 st.markdown("### Numeric Variables")
                 desc_table = compute_descriptives_table(df, metric_vars)
-                st.dataframe(desc_table.T, use_container_width=True)
+                st.dataframe(desc_table.T, width="stretch")
 
             if nominal_vars:
                 st.markdown("### Categorical Variables")
                 for var in nominal_vars:
                     st.markdown(f"**{var}**")
                     freq = compute_frequency_table(df[var].dropna())
-                    st.dataframe(freq, use_container_width=True, hide_index=True)
+                    st.dataframe(freq, width="stretch", hide_index=True)
 
         with tab_charts:
             if metric_vars:
@@ -54,10 +54,10 @@ def render():
                         col1, col2 = st.columns(2)
                         with col1:
                             fig = histogram_with_normal(series, var)
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width="stretch")
                         with col2:
                             fig = single_boxplot(series, var)
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

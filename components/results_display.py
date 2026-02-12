@@ -47,7 +47,7 @@ def render_results_table(df, title=None):
                 lambda x: f"{x:.4f}" if pd.notna(x) else ""
             )
 
-    st.dataframe(styled, use_container_width=True, hide_index=False)
+    st.dataframe(styled, width="stretch", hide_index=False)
 
 
 def render_stat_card(label, value, description=None):

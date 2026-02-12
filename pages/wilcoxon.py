@@ -72,11 +72,11 @@ def render():
             c1, c2 = st.columns(2)
             with c1:
                 fig = paired_boxplot(clean, var1, var2)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             with c2:
                 diff = clean[var1] - clean[var2]
                 fig = histogram_with_normal(diff, "Differences")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

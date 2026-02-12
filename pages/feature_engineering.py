@@ -66,7 +66,7 @@ def render():
                 st.session_state["df"] = df
                 added = len(new_feats.columns) - len(sel) - (1 if include_bias else 0)
                 st.success(f"Added {added} polynomial features. New shape: {df.shape}")
-                st.dataframe(df.head(), use_container_width=True)
+                st.dataframe(df.head(), width="stretch")
 
     # ── Interaction Features ──────────────────────────────────────────────────
     with tab_interact:
@@ -106,7 +106,7 @@ def render():
                         new_count += 1
                 st.session_state["df"] = df
                 st.success(f"Added {new_count} interaction features. New shape: {df.shape}")
-                st.dataframe(df.head(), use_container_width=True)
+                st.dataframe(df.head(), width="stretch")
 
     # ── Datetime Features ─────────────────────────────────────────────────────
     with tab_datetime:
@@ -171,7 +171,7 @@ def render():
                             df[name] = dt.dt.isocalendar().week.astype(int)
                 st.session_state["df"] = df
                 st.success(f"Extracted {len(sel) * len(features)} datetime features.")
-                st.dataframe(df.head(), use_container_width=True)
+                st.dataframe(df.head(), width="stretch")
 
     # ── Binning ────────────────────────────────────────────────────────────────
     with tab_bin:
@@ -192,7 +192,7 @@ def render():
                         df[name] = pd.qcut(df[col], q=n_bins, labels=False, duplicates="drop")
                 st.session_state["df"] = df
                 st.success(f"Added {len(sel)} binned features.")
-                st.dataframe(df.head(), use_container_width=True)
+                st.dataframe(df.head(), width="stretch")
 
     # ── Math Transforms ───────────────────────────────────────────────────────
     with tab_math:
@@ -226,7 +226,7 @@ def render():
                             df[f"{col}_minmax"] = (df[col] - mn) / (mx - mn) if mx > mn else 0
                 st.session_state["df"] = df
                 st.success(f"Applied {len(transforms)} transforms to {len(sel)} columns.")
-                st.dataframe(df.head(), use_container_width=True)
+                st.dataframe(df.head(), width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

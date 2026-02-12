@@ -57,7 +57,7 @@ def render():
             cols[3].metric("AIC", f"{result['aic']:.1f}")
 
             st.markdown("### Coefficients")
-            st.dataframe(result["coef_table"], use_container_width=True, hide_index=True)
+            st.dataframe(result["coef_table"], width="stretch", hide_index=True)
 
         with tab_assume:
             norm = result["assumptions"]["residual_normality"]
@@ -73,21 +73,21 @@ def render():
                     clean[c] = pd.to_numeric(clean[c], errors="coerce")
                 clean = clean.dropna()
                 fig = regression_scatter(clean, predictors[0], dv)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             else:
                 fig = multi_regression_actual_vs_predicted(
                     pd.Series(result["model"].model.endog),
                     pd.Series(result["fitted"]),
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
             c1, c2 = st.columns(2)
             with c1:
                 fig = qq_plot(pd.Series(result["residuals"]), "Residuals")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             with c2:
                 fig = histogram_with_normal(pd.Series(result["residuals"]), "Residuals")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

@@ -43,7 +43,7 @@ def render():
 
     c1, c2 = st.columns(2)
     with c1:
-        st.dataframe(vc_df, use_container_width=True, hide_index=True)
+        st.dataframe(vc_df, width="stretch", hide_index=True)
         imbalance_ratio = vc.max() / vc.min()
         st.metric("Imbalance Ratio (max/min)", f"{imbalance_ratio:.1f}x")
         if imbalance_ratio > 3:
@@ -57,7 +57,7 @@ def render():
         fig = px.pie(vc_df, names="Class", values="Count", title="Class Distribution",
                      color_discrete_sequence=px.colors.qualitative.Set2)
         fig.update_layout(height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     # ── Resampling ─────────────────────────────────────────────────────────────
     st.subheader("3. Apply Resampling")
@@ -110,7 +110,7 @@ def render():
                 with c1:
                     st.write("**Before**")
                     before_vc = vc_df.copy()
-                    st.dataframe(before_vc, use_container_width=True, hide_index=True)
+                    st.dataframe(before_vc, width="stretch", hide_index=True)
                     st.write(f"Total: {len(df):,}")
 
                 with c2:
@@ -118,7 +118,7 @@ def render():
                     after_vc = y_res.value_counts().reset_index()
                     after_vc.columns = ["Class", "Count"]
                     after_vc["Percentage"] = (after_vc["Count"] / len(y_res) * 100).round(2)
-                    st.dataframe(after_vc, use_container_width=True, hide_index=True)
+                    st.dataframe(after_vc, width="stretch", hide_index=True)
                     st.write(f"Total: {len(new_df):,}")
 
                 # Comparison chart
@@ -131,7 +131,7 @@ def render():
                 fig = px.bar(compare, x="Class", y="Count", color="Stage", barmode="group",
                              color_discrete_map={"Before": _ci_c["error"], "After": _ci_c["success"]})
                 fig.update_layout(height=400)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
                 if st.button("Accept & Update Dataset"):
                     st.session_state["df"] = new_df

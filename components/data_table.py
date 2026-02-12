@@ -19,9 +19,9 @@ def render_data_preview(max_rows=8):
         type_row = {col: get_var_type(col) for col in clean.columns}
         type_df = pd.DataFrame([type_row])
         type_df.index = ["Type"]
-        st.dataframe(type_df, use_container_width=True, height=60)
+        st.dataframe(type_df, width="stretch", height=60)
 
         # Show data preview
-        st.dataframe(clean.head(max_rows), use_container_width=True, hide_index=True)
+        st.dataframe(clean.head(max_rows), width="stretch", hide_index=True)
 
     return True

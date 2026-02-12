@@ -45,11 +45,11 @@ def render():
             st.markdown("---")
 
             st.markdown("### Observed Frequencies")
-            st.dataframe(result["contingency"], use_container_width=True)
+            st.dataframe(result["contingency"], width="stretch")
 
             st.markdown("### Expected Frequencies")
             st.dataframe(
-                result["expected"].round(2), use_container_width=True
+                result["expected"].round(2), width="stretch"
             )
 
             cols = st.columns(3)
@@ -74,7 +74,7 @@ def render():
                 title=f"Frequencies: {var1} × {var2}",
             )
             fig.update_layout(xaxis_title=var2, yaxis_title="Count")
-            st.plotly_chart(apply_theme(fig), use_container_width=True)
+            st.plotly_chart(apply_theme(fig), width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

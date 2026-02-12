@@ -50,14 +50,14 @@ def render():
 
         with tab_res:
             st.markdown("### ANOVA Table")
-            st.dataframe(result["anova_table"], use_container_width=True, hide_index=True)
+            st.dataframe(result["anova_table"], width="stretch", hide_index=True)
 
             st.markdown("### Group Descriptives")
-            st.dataframe(result["group_desc"], use_container_width=True, hide_index=True)
+            st.dataframe(result["group_desc"], width="stretch", hide_index=True)
 
             if result["posthoc"] is not None:
                 st.markdown("### Post-Hoc Pairwise Comparisons (Bonferroni)")
-                st.dataframe(result["posthoc"], use_container_width=True, hide_index=True)
+                st.dataframe(result["posthoc"], width="stretch", hide_index=True)
 
         with tab_assume:
             spher = result["assumptions"].get("sphericity")
@@ -73,10 +73,10 @@ def render():
             c1, c2 = st.columns(2)
             with c1:
                 fig = grouped_boxplot(clean, dv, within)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             with c2:
                 fig = group_means_bar(clean, dv, within)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

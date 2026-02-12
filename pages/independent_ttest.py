@@ -65,7 +65,7 @@ def render():
                 "Mean": [result["mean1"], result["mean2"]],
                 "SD": [result["sd1"], result["sd2"]],
             })
-            st.dataframe(group_stats, use_container_width=True, hide_index=True)
+            st.dataframe(group_stats, width="stretch", hide_index=True)
 
             st.markdown(f"**Mean Difference:** {result['mean_diff']:.4f} (SE = {result['se_diff']:.4f})")
             st.markdown(f"**95% CI:** [{result['ci_lower']:.4f}, {result['ci_upper']:.4f}]")
@@ -90,7 +90,7 @@ def render():
 
         with tab_chart:
             fig = grouped_boxplot(clean, dv, group)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

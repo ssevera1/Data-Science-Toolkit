@@ -121,9 +121,9 @@ def render():
                          color="Importance", color_continuous_scale="Viridis")
             fig.update_layout(height=max(400, len(feature_cols) * 25),
                               yaxis=dict(autorange="reversed"))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
-            st.dataframe(imp_df, use_container_width=True, hide_index=True)
+            st.dataframe(imp_df, width="stretch", hide_index=True)
         else:
             st.info("This model does not have built-in feature importances. Check SHAP tab.")
 
@@ -151,7 +151,7 @@ def render():
                              color="Importance Mean", color_continuous_scale="Plasma")
                 fig.update_layout(height=max(400, len(feature_cols) * 25),
                                   yaxis=dict(autorange="reversed"))
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # ── SHAP ───────────────────────────────────────────────────────────────────
     with tab_shap:
@@ -193,7 +193,7 @@ def render():
                              color="Mean |SHAP|", color_continuous_scale="Reds")
                 fig.update_layout(height=max(400, len(feature_cols) * 25),
                                   yaxis=dict(autorange="reversed"))
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
                 # Beeswarm / scatter
                 st.markdown("#### SHAP Beeswarm Plot")
