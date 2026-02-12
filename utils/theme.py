@@ -1,7 +1,7 @@
 """
 DS Power Tools — Central styling module.
 
-Provides dual-theme styling (Dark / Retro Light) for Streamlit, Plotly, and Matplotlib.
+Provides dual-theme styling (Dark / Light) for Streamlit, Plotly, and Matplotlib.
 """
 
 import html
@@ -77,12 +77,12 @@ COLORS = DARK_COLORS
 
 def get_colors():
     """Return the active palette dict based on session-state theme."""
-    theme = st.session_state.get("app_theme", "Dark")
-    return LIGHT_COLORS if theme == "Retro Light" else DARK_COLORS
+    theme = st.session_state.get("app_theme", "Light")
+    return LIGHT_COLORS if theme == "Light" else DARK_COLORS
 
 
 def _is_light():
-    return st.session_state.get("app_theme", "Dark") == "Retro Light"
+    return st.session_state.get("app_theme", "Light") == "Light"
 
 
 # ── Plotly Template Registration ─────────────────────────────────────────────

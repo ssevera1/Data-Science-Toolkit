@@ -13,12 +13,12 @@ st.set_page_config(
 
 # ── Theme selector (must run before CSS injection) ────────────────────────────
 if "app_theme" not in st.session_state:
-    st.session_state["app_theme"] = "Dark"
+    st.session_state["app_theme"] = "Light"
 
 theme_choice = st.sidebar.selectbox(
     "Theme",
-    ["Dark", "Retro Light"],
-    index=["Dark", "Retro Light"].index(st.session_state["app_theme"]),
+    ["Light", "Dark"],
+    index=["Light", "Dark"].index(st.session_state["app_theme"]),
     key="_theme_selector",
 )
 
