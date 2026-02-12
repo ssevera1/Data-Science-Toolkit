@@ -43,10 +43,10 @@ def _render_tool_cards(tools, c, card_grad, prefix):
             with cols[col_idx]:
                 st.markdown(
                     f'<div style="background:{card_grad};border-radius:14px;padding:1.25rem 1.25rem 0.75rem 1.25rem;'
-                    f'border:1px solid {c["border"]};min-height:140px;">'
+                    f'border:1px solid {c["border"]};min-height:170px;display:flex;flex-direction:column;">'
                     f'<span style="font-size:1.8rem;display:block;margin-bottom:0.5rem;">{icon}</span>'
                     f'<h3 style="margin-top:0;color:{c["text_bright"]};font-size:1.05rem;">{title}</h3>'
-                    f'<p style="color:{c["text_muted"]};font-size:0.9rem;line-height:1.5;margin-bottom:0;">{desc}</p>'
+                    f'<p style="color:{c["text_muted"]};font-size:0.9rem;line-height:1.5;margin-bottom:0;flex:1;">{desc}</p>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
