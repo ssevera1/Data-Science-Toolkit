@@ -6,6 +6,12 @@
 
 ---
 
+## Privacy & Open Source
+
+**Your data never leaves your machine.** DS Power Tools runs entirely on your local device — there are no external API calls, no cloud services, no telemetry, and no tracking of any kind. All computation, model training, and statistical analysis is performed locally using established open-source libraries (scikit-learn, SciPy, statsmodels, XGBoost, LightGBM, SHAP, Optuna, and others). Streamlit's built-in usage statistics are explicitly disabled. Your datasets, results, and models stay on your computer and are never transmitted anywhere.
+
+---
+
 ## Features
 
 ### Data Science Tools
@@ -100,7 +106,6 @@ If no file exists at the specified path, the image section is simply hidden.
 - **Data Science tools** — Upload a CSV or Excel file on the Home page (up to 200 MB). Your dataset persists across all DS tool pages via the sidebar navigation.
 - **Statistics tools** — Navigate to "Data Input" under Statistics Tools. Enter data manually in the table editor, paste from a spreadsheet, or upload a separate file. Data persists across all statistical test pages.
 - Both toolsets maintain separate data — uploading for one doesn't affect the other.
-- All processing happens locally. Nothing is sent to any external server.
 
 ---
 
