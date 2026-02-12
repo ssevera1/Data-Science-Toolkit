@@ -58,3 +58,36 @@ def render():
                         with col2:
                             fig = single_boxplot(series, var)
                             st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Overview
+Select one or more variables to compute descriptive statistics. The statistics and charts produced depend on the variable type assigned on the Data Input page.
+
+#### Numeric Variables (Metric / Ordinal)
+A summary table is generated with the following statistics for each selected variable:
+
+- **N** -- number of non-missing observations
+- **Mean** -- arithmetic average
+- **Standard Deviation (SD)** -- measure of spread around the mean
+- **Min / Max** -- smallest and largest observed values
+- **Q1 (25th percentile)** -- value below which 25% of observations fall
+- **Median (Q2, 50th percentile)** -- middle value of the sorted data
+- **Q3 (75th percentile)** -- value below which 75% of observations fall
+- **Skewness** -- measure of distribution asymmetry (0 = symmetric; positive = right-skewed; negative = left-skewed)
+- **Kurtosis** -- measure of tail heaviness relative to a normal distribution (0 = normal-like tails)
+- **Standard Error (SE)** -- standard deviation of the sampling distribution of the mean (SD / sqrt(N))
+
+#### Categorical Variables (Nominal)
+A **frequency table** is displayed for each nominal variable, showing:
+
+- **Count** -- number of observations in each category
+- **Percentage** -- proportion of total observations per category
+
+#### Charts
+- **Histogram with normal curve overlay** -- shows the shape of the distribution; the curve helps assess whether the data approximate a normal distribution.
+- **Box plot** -- displays the median (center line), interquartile range (box), and potential outliers (points beyond the whiskers).
+        """)
+

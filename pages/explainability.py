@@ -10,8 +10,8 @@ from utils.theme import page_header, set_matplotlib_dark
 
 
 def _guard():
-    if "df" not in st.session_state:
-        st.warning("Upload a dataset on the **Home** page first.")
+    if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
+        st.warning("Upload a dataset on the **Home** page first, or enter data via **Statistics Tools > Data Input**.")
         st.stop()
 
 
@@ -273,3 +273,38 @@ def render():
                     plt.tight_layout()
                     st.pyplot(fig)
                     plt.close()
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Model Explainability — Understand Any Model's Decisions
+
+This page provides three complementary approaches to explain how a trained model makes predictions.
+
+---
+
+#### Setup
+- **Target column** — the variable being predicted.
+- **Task type** — auto-detected as Classification or Regression, with manual override.
+- **Model selection** — choose from Random Forest, XGBoost, LightGBM, or Gradient Boosting. The model is trained automatically with a StandardScaler on all numeric features.
+
+#### Feature Importance Tab
+- **Built-in Feature Importance** — uses the model's native `feature_importances_` attribute (based on how much each feature reduces impurity across all trees). Displayed as a ranked horizontal bar chart and a data table.
+- **Permutation Importance** — a model-agnostic method that measures how much the model's score **drops** when a single feature's values are randomly shuffled. A large drop means the feature is important. This method is more reliable than built-in importance because it accounts for feature interactions and is not biased toward high-cardinality features.
+
+#### SHAP Analysis Tab
+- **SHAP (SHapley Additive exPlanations)** — based on cooperative game theory (Shapley values). Each feature's contribution to a prediction is computed fairly, considering all possible feature combinations.
+- **Global Bar Chart (Mean |SHAP|)** — shows the average absolute SHAP value per feature across all samples. Higher values indicate features with more influence on predictions overall.
+- **Beeswarm Plot** — each dot represents a single sample. The x-axis shows the SHAP value (impact on prediction), and color indicates the feature's actual value (red = high, blue = low). This reveals both the **direction** and **magnitude** of each feature's effect.
+- **Single Prediction Waterfall** — explains one individual prediction by showing how each feature pushes the prediction away from the baseline (expected value). Useful for understanding specific decisions.
+- **Background samples** slider controls the sample size used for SHAP computation (lower = faster, higher = more accurate).
+
+#### Partial Dependence Tab
+- **1D Partial Dependence Plots (PDP)** — show the **marginal effect** of a single feature on the model's prediction, averaged over all other features. The x-axis is the feature value, and the y-axis is the predicted outcome. Useful for understanding non-linear relationships.
+- **2D Feature Interaction PDP** — shows how **two features jointly** affect the prediction. Displayed as a contour/heatmap plot. Useful for identifying interaction effects between feature pairs.
+
+#### Notes
+- All models are trained with a **StandardScaler** to normalize features before fitting.
+- SHAP uses **TreeExplainer** for tree-based models (fast, exact) and falls back to **KernelExplainer** for others (slower, approximate).
+        """)

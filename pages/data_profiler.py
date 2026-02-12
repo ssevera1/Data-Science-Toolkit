@@ -8,8 +8,8 @@ from utils.theme import page_header
 
 
 def _guard():
-    if "df" not in st.session_state:
-        st.warning("Upload a dataset on the **Home** page first.")
+    if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
+        st.warning("Upload a dataset on the **Home** page first, or enter data via **Statistics Tools > Data Input**.")
         st.stop()
 
 
@@ -182,3 +182,44 @@ def render():
                 st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("No numeric columns found.")
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Data Profiler — Automated Exploratory Data Analysis
+
+This page provides a comprehensive, automated EDA of your dataset across five tabs.
+
+---
+
+#### Overview Tab
+- **Dataset Summary** — key metrics at a glance:
+  - **Rows** and **Columns** — the shape of your data.
+  - **Duplicate Rows** — number of exact duplicate rows detected.
+  - **Memory** — approximate memory usage of the DataFrame in MB.
+- **Descriptive Statistics** — a transposed summary table (`df.describe(include='all')`) showing count, mean, std, min, quartiles, max for numeric columns, and count, unique, top, freq for categorical columns.
+- **Column Types** — a bar chart showing the distribution of data types (e.g., `int64`, `float64`, `object`) across all columns.
+
+#### Distributions Tab
+- **Numeric Distributions** — interactive **histograms** (via Plotly) for selected numeric columns. Select up to all numeric columns; charts are arranged in a 3-column grid.
+- **Categorical Distributions** — **bar charts** showing the top 20 most frequent values for each selected categorical column.
+
+#### Correlations Tab
+- **Correlation Matrix** — a heatmap of pairwise correlations between all numeric columns.
+  - Choose from **Pearson** (linear), **Spearman** (rank-based), or **Kendall** (concordance-based) methods.
+  - Color scale ranges from -1 (strong negative) to +1 (strong positive).
+- **Highly Correlated Pairs** — automatically identifies all feature pairs where **|r| > 0.8**, which may indicate multicollinearity. Consider removing one feature from each highly correlated pair before modeling.
+
+#### Missing Values Tab
+- **Missing Value Summary** — a table listing each column with missing data, the count, and the percentage of missing values.
+- **Percentage Bar Chart** — a visual bar chart colored by severity (using a red color scale).
+- **Missing Value Pattern Heatmap** — shows the first 200 rows of columns with missing data. Red cells indicate missing values. This helps identify whether missingness follows a pattern (e.g., columns that are always missing together).
+
+#### Outliers Tab
+- Uses the **IQR (Interquartile Range) method** to detect outliers.
+  - **IQR** = Q3 - Q1; outlier boundaries are Q1 - k*IQR and Q3 + k*IQR.
+  - The **IQR Multiplier (k)** is configurable from 1.0 to 3.0 (default 1.5). Lower values flag more outliers; higher values are more permissive.
+- **Outlier Summary Table** — shows Q1, Q3, IQR, lower/upper bounds, outlier count, and outlier percentage for each numeric column.
+- **Box Plots** — interactive box plots for selected columns, providing a visual overview of the spread and outliers.
+        """)

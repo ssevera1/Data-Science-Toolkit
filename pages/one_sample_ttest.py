@@ -75,3 +75,36 @@ def render():
             with c2:
                 fig = qq_plot(series, var)
                 st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+The one-sample t-test determines whether a **sample mean** significantly differs from a known or hypothesized **population mean** (denoted as the test value).
+
+#### When to Use
+- You have **one group** of continuous (metric) data.
+- You want to compare that group's mean to a **specific reference value** (e.g., a population average, a target, or a benchmark).
+
+#### Input
+- **Test variable** -- must be metric (continuous numeric data).
+- **Test value (or test mean)** -- the hypothesized population mean to compare against.
+
+#### Results Tab
+- **t-statistic** -- measures how many standard errors the sample mean is from the test value.
+- **p-value** -- probability of observing a result this extreme if the null hypothesis (mean = test value) is true.
+- **Degrees of freedom** -- N - 1, where N is the number of observations.
+- **Mean difference** -- sample mean minus the test value.
+- **Standard error (SE)** -- SD / sqrt(N); precision of the sample mean estimate.
+- **95% Confidence Interval** -- range likely to contain the true mean difference.
+- **Cohen's d** -- standardized effect size: **small ~ 0.2**, **medium ~ 0.5**, **large ~ 0.8**.
+
+#### Assumptions Tab
+- **Shapiro-Wilk normality test** -- tests whether the data follow a normal distribution. A p-value > 0.05 suggests normality is plausible. The t-test is robust to normality violations when **N > 30** (Central Limit Theorem).
+
+#### Charts Tab
+- **Box plot** with a dashed reference line at the test value -- visually compare the sample distribution to the hypothesized mean.
+- **Q-Q plot** -- points should follow the diagonal line if the data are approximately normally distributed. Deviations indicate departures from normality.
+        """)
+

@@ -104,3 +104,31 @@ def render():
                 correct = (predicted_class == y).sum()
                 total = len(y)
                 st.markdown(f"**Correctly classified:** {correct}/{total} ({correct/total:.1%})")
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+Logistic regression predicts a **binary outcome** (0 or 1) from one or more predictor variables. Instead of predicting a continuous value, it estimates the **probability** that the outcome equals 1.
+
+#### When to Use
+- The **dependent variable is binary** (e.g., pass/fail, yes/no, survived/not survived).
+- Predictor variables are **metric** (continuous).
+
+#### Results Tab
+- **Likelihood Ratio Chi-squared test** -- tests overall model fit by comparing the model with predictors to a null (intercept-only) model.
+- **Pseudo R-squared (McFadden)** -- analogous to R-squared in linear regression but based on log-likelihoods. Values of 0.2-0.4 are considered a good fit.
+- **Accuracy** -- percentage of observations correctly classified using a 0.5 probability cutoff.
+- **N** -- number of observations used.
+- **AIC** -- model fit measure; lower values indicate better fit.
+- **Coefficient table** with **Odds Ratios (OR)**:
+    - **B (coefficient)** -- the log-odds change for a one-unit increase in the predictor.
+    - **OR (Odds Ratio)** -- exponentiated coefficient. **OR > 1** means increased odds of the outcome being 1 per unit increase in the predictor. **OR < 1** means decreased odds. **OR = 1** means no effect.
+    - **CI for OR** -- confidence interval for the odds ratio.
+
+#### Charts Tab
+- **Logistic curve** (simple regression with one predictor) -- shows the S-shaped probability curve and the observed data points.
+- **Classification summary** (multiple regression) -- shows the number of correctly and incorrectly classified observations.
+        """)
+

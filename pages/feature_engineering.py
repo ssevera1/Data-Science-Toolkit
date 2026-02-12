@@ -7,8 +7,8 @@ from utils.theme import page_header
 
 
 def _guard():
-    if "df" not in st.session_state:
-        st.warning("Upload a dataset on the **Home** page first.")
+    if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
+        st.warning("Upload a dataset on the **Home** page first, or enter data via **Statistics Tools > Data Input**.")
         st.stop()
 
 
@@ -227,6 +227,64 @@ def render():
                 st.session_state["df"] = df
                 st.success(f"Applied {len(transforms)} transforms to {len(sel)} columns.")
                 st.dataframe(df.head(), use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Feature Engineering — Automated Feature Generation
+
+This page lets you create new features from your existing data across five tabs. All new features are added to the shared dataset.
+
+---
+
+#### Polynomial Features Tab
+- Generates **polynomial and interaction terms** using scikit-learn's `PolynomialFeatures`.
+- Select numeric columns and a **degree** (2 to 4):
+  - Degree 2 produces squared terms (e.g., `x1^2`, `x1*x2`).
+  - Degree 3 adds cubed terms, and so on.
+- **Include bias** option adds a constant column of 1s (rarely needed if your model has an intercept).
+- A safety cap of **1,000 features** prevents accidental memory issues.
+
+#### Interactions Tab
+- Creates **pairwise interaction features** between selected numeric columns.
+- Four operations available:
+  - **Multiply** (`x1 * x2`) — captures multiplicative relationships.
+  - **Divide** (`x1 / x2`) — captures ratio relationships. Division by zero produces NaN.
+  - **Add** (`x1 + x2`) — captures additive effects.
+  - **Subtract** (`x1 - x2`) — captures difference effects.
+- Also capped at 1,000 features for safety.
+
+#### Datetime Tab
+- **Auto-detects** datetime columns (including string columns that can be parsed as dates).
+- Extracts a variety of time-based features:
+  - **year, month, day** — calendar components.
+  - **dayofweek** — 0 (Monday) through 6 (Sunday).
+  - **hour, minute** — time-of-day components.
+  - **quarter** — fiscal quarter (1-4).
+  - **is_weekend** — binary flag (1 if Saturday/Sunday, 0 otherwise).
+  - **day_of_year, week_of_year** — position within the year.
+- If no datetime column is detected, you can manually select a column and attempt to parse it.
+
+#### Binning Tab
+- Converts continuous numeric columns into **discrete bins** (buckets):
+  - **Equal Width (cut)** — divides the value range into N bins of equal width. Good for uniformly distributed data.
+  - **Equal Frequency (qcut)** — divides data so each bin has approximately the same number of observations. Better for skewed distributions.
+- Configurable **number of bins** from 2 to 20.
+- Creates a new column with a `_binned` suffix containing integer bin labels.
+
+#### Math Transforms Tab
+- Applies common mathematical transformations to numeric columns:
+  - **Log (log1p)** — `log(1 + x)`. Compresses right-skewed distributions. Negative values are clipped to 0.
+  - **Square Root** — `sqrt(x)`. Milder compression than log. Negative values are clipped to 0.
+  - **Reciprocal** — `1 / x`. Useful for inverse relationships. Zero values produce NaN.
+  - **Square** — `x^2`. Emphasizes large values and captures quadratic effects.
+  - **Standard Scale** — `(x - mean) / std`. Centers data at 0 with unit variance (z-score normalization).
+  - **Min-Max Scale** — `(x - min) / (max - min)`. Scales data to the [0, 1] range.
+
+#### Download Section
+- Download the dataset with all newly engineered features as a CSV file.
+        """)
 
     # ── Download ───────────────────────────────────────────────────────────────
     st.divider()

@@ -219,3 +219,42 @@ def render():
                              title=col, color_discrete_map={"Reference": "#3498db", "Current": "#e74c3c"})
                 fig.update_layout(height=400)
                 st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Data Drift Detection — Monitor Feature Distribution Changes
+
+This page detects whether the statistical distribution of your features has changed between a reference (baseline) dataset and a current (production) dataset.
+
+---
+
+#### Data Input Modes
+- **Upload two separate files** — provide a reference dataset (e.g., training data) and a current dataset (e.g., new production data) as CSV or Excel files.
+- **Split current dataset** — divide the dataset already loaded in the app by a percentage. The first N% becomes the reference and the remainder becomes the current dataset. Useful for time-based splits.
+
+#### Numeric Drift Detection
+Three statistical tests are applied to each common numeric feature:
+- **Kolmogorov-Smirnov (KS) Test** — compares the **entire distributions** of two samples. The KS statistic measures the maximum distance between the two cumulative distribution functions. A low p-value indicates the distributions are significantly different.
+- **Welch's t-test** — compares the **means** of two samples without assuming equal variances. A low p-value indicates the means are significantly different. Less sensitive to shape changes than KS.
+- **Population Stability Index (PSI)** — a widely-used metric in model monitoring:
+  - **PSI < 0.1** — no significant shift.
+  - **0.1 < PSI < 0.25** — moderate shift; investigate further.
+  - **PSI > 0.25** — significant shift; model retraining is likely needed.
+  - PSI is computed by binning both distributions and comparing the proportions in each bin.
+
+#### Categorical Drift Detection
+- **Chi-squared test of independence** — compares the frequency distribution of categories between the reference and current datasets. A low p-value indicates the categorical distribution has shifted significantly.
+- Reports the number of unique categories in each dataset for comparison.
+
+#### Distribution Visualization
+- **Numeric features** — overlaid histograms (blue = reference, red = current) for visual comparison of distribution shapes.
+- **Categorical features** — grouped bar charts showing the top 15 category counts side by side.
+
+#### Drift Interpretation
+- **Significance level (alpha)** — configurable from 0.01 to 0.10 (default 0.05). Features with a KS p-value below alpha are flagged as drifted.
+- **Drift summary metrics** — total features tested, number with drift detected, and drift percentage.
+- Rows with detected drift are **highlighted in red** in the results table.
+- **Mean Shift %** shows the relative change in the feature mean between reference and current datasets.
+        """)

@@ -66,3 +66,37 @@ def render():
 
             fig = correlation_scatter(clean, var1, var2, r_value=result["rho"])
             st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+Spearman correlation measures the **strength and direction of the monotonic relationship** between two variables using their **ranks** rather than raw values.
+
+#### When to Use
+- One or both variables are **ordinal**.
+- The data have **non-normal distributions** or contain **outliers**.
+- The relationship is **monotonic** (consistently increasing or decreasing) but **not necessarily linear**.
+
+#### Difference from Pearson
+- **Pearson** uses raw values and measures **linear** association. It is sensitive to outliers.
+- **Spearman** converts values to **ranks** first, then computes the correlation on ranks. This makes it robust to outliers and non-linear (but monotonic) relationships.
+
+#### Results Tab
+- **Rho (Spearman correlation coefficient)** -- ranges from **-1** (perfect negative monotonic relationship) through **0** (no monotonic relationship) to **+1** (perfect positive monotonic relationship).
+- **p-value** -- tests the null hypothesis that the true correlation is zero.
+- **N** -- number of valid observations.
+- **95% Confidence Interval for rho**.
+
+#### Effect Size Interpretation
+Same as Pearson r:
+- |rho| < 0.1 -- **negligible**
+- |rho| 0.1 to 0.3 -- **small**
+- |rho| 0.3 to 0.5 -- **medium**
+- |rho| > 0.5 -- **large**
+
+#### Charts Tab
+- **Scatter plot with trend line** -- visualizes the relationship between the two variables. Because Spearman uses ranks, the trend may appear curved even with a strong correlation.
+        """)
+

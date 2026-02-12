@@ -60,3 +60,32 @@ def render():
         with tab_chart:
             fig = two_way_bar(clean, dv, within, between)
             st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+Mixed ANOVA tests the effects of **one within-subjects factor** and **one between-subjects factor** simultaneously on a continuous dependent variable. It combines elements of repeated measures ANOVA and independent-groups ANOVA.
+
+#### When to Use
+- You have **repeated measurements** on the same subjects (within-subjects factor) **and** a **grouping variable** that divides subjects into separate groups (between-subjects factor).
+- Example: treatment group vs. control group (between) measured at three time points (within).
+
+#### Input
+- **Dependent variable (DV)** -- metric (continuous) variable.
+- **Within-subjects factor** -- identifies the repeated condition (e.g., time point, measurement occasion).
+- **Between-subjects factor** -- nominal variable that separates subjects into independent groups (e.g., treatment vs. control).
+- **Subject ID** -- uniquely identifies each participant.
+
+#### Results Tab
+- **ANOVA table** showing F-statistic and p-value for:
+    - **Within-subjects effect** -- do means change across the repeated conditions?
+    - **Between-subjects effect** -- do the groups differ overall?
+    - **Interaction** -- does the pattern of change across conditions differ between the groups?
+- **Group descriptives** -- N, Mean, and SD broken down by both factors.
+
+#### Charts Tab
+- **Two-way bar chart** -- shows means broken down by both the within-subjects and between-subjects factors, helping visualize main effects and interactions.
+        """)
+

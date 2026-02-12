@@ -61,3 +61,37 @@ def render():
         with tab_chart:
             fig = grouped_boxplot(clean, dv, group)
             st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+The Kruskal-Wallis H test is a **non-parametric alternative to one-way ANOVA**. It tests whether the distributions of a variable differ across three or more independent groups.
+
+#### When to Use
+- One variable measured across **3 or more independent groups**.
+- The data are **non-normally distributed**, **ordinal**, or have **unequal variances** across groups.
+- As a robust alternative when ANOVA assumptions are not met.
+
+#### How It Works
+All observations from every group are **pooled and ranked** together. The test compares the **mean ranks** between groups. The H statistic follows a **chi-squared distribution** approximately.
+
+#### Input
+- **Test variable** -- metric or ordinal variable.
+- **Grouping variable** -- nominal variable with 3 or more groups.
+
+#### Results Tab
+- **H statistic** -- the Kruskal-Wallis test statistic (chi-squared distributed).
+- **p-value** -- probability of observing this result if all group distributions are identical.
+- **Degrees of freedom** -- number of groups minus 1.
+- **Group descriptives** -- N, Median, and Mean Rank for each group.
+- **Epsilon-squared effect size** -- proportion of variance in ranks explained by group membership. Ranges from 0 (no effect) to 1 (complete separation).
+
+#### Post-Hoc Comparisons
+When the overall test is significant, **Bonferroni-corrected pairwise comparisons** are performed to identify which specific pairs of groups differ.
+
+#### Charts Tab
+- **Grouped box plot** -- compares distributions across all groups.
+        """)
+

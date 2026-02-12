@@ -7,10 +7,12 @@ from core.constants import DEFAULT_ROWS, DEFAULT_COLS
 
 
 def init_state():
-    """Initialize all session state variables if not already set."""
-    if "stats_df" not in st.session_state:
-        st.session_state.stats_df = _create_empty_df()
+    """Initialize all session state variables if not already set.
 
+    The 'df' key is shared between Data Science and Statistics tools.
+    It is NOT created here — it's created on first use by the Stats
+    Data Input page or by uploading a file on the Home page.
+    """
     if "stats_var_types" not in st.session_state:
         st.session_state.stats_var_types = {}
 
@@ -29,13 +31,18 @@ def _create_empty_df(n_rows=DEFAULT_ROWS, n_cols=DEFAULT_COLS):
 
 
 def get_df():
-    """Get the current DataFrame from session state."""
-    return st.session_state.stats_df
+    """Get the current DataFrame from session state.
+
+    Lazily creates an empty editor DataFrame if none exists yet.
+    """
+    if "df" not in st.session_state:
+        st.session_state["df"] = _create_empty_df()
+    return st.session_state["df"]
 
 
 def set_df(df):
-    """Set the DataFrame in session state."""
-    st.session_state.stats_df = df
+    """Set the DataFrame in session state (shared between DS and Stats)."""
+    st.session_state["df"] = df
 
 
 def get_var_types():

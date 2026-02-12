@@ -83,3 +83,37 @@ def render():
 
             fig = correlation_scatter(clean, var1, var2, r_value=result["r"])
             st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+Pearson correlation measures the **strength and direction of the linear relationship** between two continuous variables.
+
+#### When to Use
+- Both variables are **continuous** (metric).
+- The relationship between the variables is expected to be **linear** (a straight-line trend).
+- If the relationship is monotonic but not linear, consider Spearman correlation instead.
+
+#### Results Tab
+- **r (Pearson correlation coefficient)** -- ranges from **-1** (perfect negative linear relationship) through **0** (no linear relationship) to **+1** (perfect positive linear relationship).
+- **R-squared** -- the proportion of variance in one variable explained by the other (r squared).
+- **p-value** -- tests the null hypothesis that the true correlation is zero.
+- **Degrees of freedom** -- N - 2.
+- **95% Confidence Interval for r** -- range likely to contain the true population correlation.
+
+#### Effect Size Interpretation
+- |r| < 0.1 -- **negligible**
+- |r| 0.1 to 0.3 -- **small**
+- |r| 0.3 to 0.5 -- **medium**
+- |r| > 0.5 -- **large**
+
+#### Assumptions Tab
+- **Shapiro-Wilk normality test** for each variable -- Pearson correlation assumes **bivariate normality**. Individual normality tests provide a practical check. Robust to violations with larger samples.
+- **Linearity** -- the relationship should be linear, which can be assessed visually with the scatter plot.
+
+#### Charts Tab
+- **Scatter plot with regression line** -- visualizes the linear relationship between the two variables and the direction/strength of the correlation.
+        """)
+

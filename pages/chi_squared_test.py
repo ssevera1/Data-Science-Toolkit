@@ -75,3 +75,31 @@ def render():
             )
             fig.update_layout(xaxis_title=var2, yaxis_title="Count")
             st.plotly_chart(apply_theme(fig), use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+The chi-squared test of independence tests whether there is a **significant association between two categorical variables**. It compares the observed frequencies in a contingency table to the frequencies that would be expected if the variables were independent.
+
+#### When to Use
+- Both variables are **nominal** (categorical) -- e.g., gender and preference, treatment group and outcome, region and product choice.
+- You want to determine whether knowing the value of one variable helps predict the other.
+
+#### Results Tab
+- **Chi-squared statistic** -- measures the overall discrepancy between observed and expected frequencies.
+- **p-value** -- probability of observing this discrepancy (or more extreme) if the variables are truly independent.
+- **Degrees of freedom** -- (rows - 1) x (columns - 1).
+- **Observed frequency table** -- the actual counts in each combination of categories.
+- **Expected frequency table** -- the counts expected under the null hypothesis of independence.
+- **N** -- total number of observations.
+- **Cramer's V** -- effect size measuring the strength of association. Ranges from **0** (no association) to **1** (perfect association).
+
+#### Assumptions Tab
+- **Expected frequencies should be >= 5** in all cells. If this assumption is violated (many cells with expected counts below 5), the chi-squared approximation may be unreliable. Consider Fisher's exact test as an alternative.
+
+#### Charts Tab
+- **Grouped bar chart** -- displays observed frequencies broken down by both variables, making it easy to visually compare the distribution of categories.
+        """)
+

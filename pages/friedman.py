@@ -70,3 +70,38 @@ def render():
             with c2:
                 fig = group_means_bar(clean, dv, within)
                 st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+The Friedman test is a **non-parametric alternative to repeated measures ANOVA**. It tests whether the distributions differ across three or more related conditions (within-subjects design).
+
+#### When to Use
+- **Same subjects** measured under **3 or more conditions**.
+- The data are **non-normally distributed** or **ordinal**.
+- A robust alternative when repeated measures ANOVA assumptions are not met.
+
+#### Input
+- **Dependent variable (DV)** -- metric variable containing the measurements.
+- **Within-subjects factor** -- column identifying which condition each observation belongs to.
+- **Subject ID** -- column uniquely identifying each participant.
+
+#### Results Tab
+- **Chi-squared statistic** -- the Friedman test statistic.
+- **p-value** -- significance of the overall difference across conditions.
+- **Degrees of freedom** -- K - 1, where K is the number of conditions.
+- **N (subjects)** -- number of participants.
+- **K (conditions)** -- number of repeated conditions.
+- **Kendall's W (coefficient of concordance)** -- effect size measuring agreement in rankings across subjects. Ranges from **0** (no agreement / no effect) to **1** (perfect agreement / complete effect).
+- **Group descriptives** -- N, Median, and Mean for each condition.
+
+#### Post-Hoc Comparisons
+When the overall test is significant, **Bonferroni-corrected pairwise comparisons** identify which specific pairs of conditions differ.
+
+#### Charts Tab
+- **Grouped box plot** -- compares distributions across conditions.
+- **Group means bar chart** -- visualizes mean differences between conditions.
+        """)
+

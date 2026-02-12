@@ -74,3 +74,34 @@ def render():
         with tab_chart:
             fig = two_way_bar(clean, dv, factor1, factor2)
             st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+Two-way ANOVA tests the effects of **two categorical factors** and their **interaction** on a continuous dependent variable.
+
+#### When to Use
+- One **continuous dependent variable** (DV).
+- **Two categorical independent variables** (factors) -- e.g., treatment type and gender.
+- You want to assess **main effects** of each factor and whether the two factors **interact**.
+
+#### Results Tab
+- **ANOVA table** -- shows the F-statistic and p-value for:
+    - **Factor 1 main effect** -- does the DV differ across levels of Factor 1, averaging over Factor 2?
+    - **Factor 2 main effect** -- does the DV differ across levels of Factor 2, averaging over Factor 1?
+    - **Interaction effect** -- does the effect of one factor depend on the level of the other factor?
+- **Group descriptives** -- N, Mean, and SD broken down by both factors.
+
+#### Interpreting the Interaction
+- A **significant interaction** means the effect of one factor **changes depending on** the level of the other factor. In this case, interpret main effects with caution -- they may be misleading.
+- A **non-significant interaction** means the effects of the two factors are **additive** (independent of each other).
+
+#### Assumptions Tab
+- **Levene's test** -- tests **homogeneity of variances** across all factor-level combinations. If significant, the equal-variance assumption is violated.
+
+#### Charts Tab
+- **Grouped bar chart** -- shows mean values of the DV broken down by both factors, making it easy to visualize main effects and interactions.
+        """)
+

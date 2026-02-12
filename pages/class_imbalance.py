@@ -6,8 +6,8 @@ from utils.theme import page_header
 
 
 def _guard():
-    if "df" not in st.session_state:
-        st.warning("Upload a dataset on the **Home** page first.")
+    if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
+        st.warning("Upload a dataset on the **Home** page first, or enter data via **Statistics Tools > Data Input**.")
         st.stop()
 
 
@@ -139,3 +139,38 @@ def render():
 
             except Exception:
                 st.error("Resampling failed. Please check that the target column and features are suitable for the selected method.")
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Class Imbalance Handler — Fix Skewed Class Distributions
+
+This page detects class imbalance in classification targets and provides resampling methods to correct it.
+
+---
+
+#### Target Selection
+- Choose the **target (class) column** — the column you want to predict in classification.
+- The tool displays the number of unique classes and whether the task is **binary** (2 classes) or **multiclass**.
+- Targets with more than 50 unique values are flagged as likely not classification targets.
+
+#### Imbalance Analysis
+- **Value Counts Table** — shows each class, its count, and its percentage of the total dataset.
+- **Imbalance Ratio** — computed as `max_class_count / min_class_count`. Interpretation:
+  - **< 1.5x** — classes are relatively balanced (green).
+  - **1.5x - 3x** — moderate imbalance (yellow warning).
+  - **> 3x** — significant imbalance (red alert).
+- **Pie Chart** — visual breakdown of class proportions.
+
+#### Resampling Methods
+- **SMOTE (Synthetic Minority Oversampling Technique)** — generates **synthetic** minority class samples by interpolating between existing minority samples and their k-nearest neighbors. Produces more diverse samples than simple duplication. The `k_neighbors` parameter is automatically adjusted based on the smallest class size.
+- **Random Oversampling** — **duplicates** existing minority class samples at random until all classes are balanced. Simple but can lead to overfitting on duplicated samples.
+- **Random Undersampling** — **removes** majority class samples at random until all classes are balanced. Fast but discards potentially useful data.
+- **SMOTE + Tomek Links** — a **hybrid** approach that first applies SMOTE to oversample the minority class, then removes **Tomek links** (pairs of nearest neighbors from different classes that are close together). This cleans up the decision boundary for better separation.
+
+#### Before vs After Comparison
+- After resampling, a side-by-side comparison shows the class counts and percentages before and after.
+- A **grouped bar chart** visualizes the change in class distribution.
+- Click **"Accept & Update Dataset"** to replace the current dataset with the resampled version.
+        """)

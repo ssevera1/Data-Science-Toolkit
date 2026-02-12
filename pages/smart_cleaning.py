@@ -5,8 +5,8 @@ from utils.theme import page_header
 
 
 def _guard():
-    if "df" not in st.session_state:
-        st.warning("Upload a dataset on the **Home** page first.")
+    if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
+        st.warning("Upload a dataset on the **Home** page first, or enter data via **Statistics Tools > Data Input**.")
         st.stop()
 
 
@@ -184,6 +184,49 @@ def render():
                 st.rerun()
         else:
             st.success("No duplicate rows found.")
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Smart Cleaning — One-Click Data Preparation
+
+This page provides four tabs for common data cleaning tasks. All changes update the shared dataset used across the app.
+
+---
+
+#### Missing Values Tab
+- **Global Strategies:**
+  - **Drop rows with any null** — removes every row that has at least one missing value. Simple but can lose significant data if missingness is widespread.
+  - **Drop columns > threshold % missing** — removes entire columns where the percentage of missing values exceeds a configurable threshold (default 50%).
+- **Per-Column Strategies** — configure a different fill strategy for each column:
+  - **Mean** — fills with the column's arithmetic mean (numeric only). Good for normally distributed data.
+  - **Median** — fills with the column's median. More robust to outliers than mean.
+  - **Mode** — fills with the most frequent value. Works for both numeric and categorical columns.
+  - **Zero** — fills with 0 (numeric only). Appropriate when zero is a meaningful default.
+  - **Constant (Unknown)** — fills categorical columns with the string "Unknown".
+  - **Forward Fill** — propagates the last valid value forward. Useful for time-series or ordered data.
+
+#### Outlier Treatment Tab
+- Select one or more numeric columns and choose a treatment method:
+  - **IQR Capping** — clips values to [Q1 - k*IQR, Q3 + k*IQR]. Outliers are replaced with the boundary values rather than removed.
+  - **Z-Score Capping** — clips values to [mean - k*std, mean + k*std]. Uses standard deviations instead of quartiles.
+  - **Remove Rows** — deletes rows where the value falls outside the IQR boundaries.
+- The **multiplier/threshold (k)** is adjustable from 1.0 to 4.0 (default 1.5).
+
+#### Encoding Tab
+- Converts categorical (text) columns into numeric representations for machine learning:
+  - **Label Encoding** — assigns each unique category an ordinal integer (0, 1, 2, ...). Suitable for ordinal data but can imply false ordering for nominal data.
+  - **One-Hot Encoding** — creates binary (0/1) dummy columns for each category (drops the first to avoid multicollinearity). Best for nominal data with few unique values.
+  - **Frequency Encoding** — replaces each category with its proportion (frequency) in the dataset. Preserves information about category prevalence.
+
+#### Deduplication Tab
+- Detects and displays **exact duplicate rows** in the dataset.
+- Choose which duplicate to **keep** — the **first** or **last** occurrence — and remove the rest.
+
+#### Download Section
+- After cleaning, download the updated dataset as a **CSV file**. The download applies CSV-injection sanitization to protect against formula-based attacks in spreadsheet applications.
+        """)
 
     # ── Download ───────────────────────────────────────────────────────────────
     st.divider()

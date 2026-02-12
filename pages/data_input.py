@@ -104,3 +104,29 @@ def render():
     # --- Summary ---
     clean = df.dropna(how="all")
     st.caption(f"{len(clean)} rows × {len(df.columns)} variables")
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Import Data
+- **Upload File** -- upload a **CSV** or **Excel** (.xlsx / .xls) file directly from your computer.
+- **Paste Data** -- paste tab-separated, comma-separated, or semicolon-separated text copied from a spreadsheet or other source. Click **Load Pasted Data** to import it.
+
+#### Variable Types
+Each column is assigned one of three types. The type you choose determines which statistical tests and charts are available throughout the app.
+
+- **Metric** -- continuous numeric data (e.g., height, weight, temperature). Required by t-tests, ANOVA, correlation, and regression tools.
+- **Nominal** -- unordered categorical data (e.g., gender, treatment group, color). Used as grouping variables and in chi-squared / binomial tests.
+- **Ordinal** -- ordered categorical data (e.g., Likert scales, education level). Treated as numeric for descriptive statistics and non-parametric tests.
+
+#### Data Table
+- An **editable spreadsheet** -- click any cell to modify its value directly.
+- **+ Add Column** adds a new empty column; **+ Add 10 Rows** appends blank rows.
+- **Download CSV / Download Excel** exports the current data to your computer.
+- Rows and columns can also be added or removed through the built-in data editor controls.
+
+#### Shared Data
+Data entered or imported on this page is **shared across all Data Science and Statistics tools** in the application. Any changes you make here are immediately available on every other page.
+        """)
+

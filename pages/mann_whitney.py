@@ -66,3 +66,35 @@ def render():
         with tab_chart:
             fig = grouped_boxplot(clean, dv, group)
             st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+The Mann-Whitney U test is a **non-parametric alternative to the independent samples t-test**. It compares the distributions (and typically the medians) of two independent groups without assuming normality.
+
+#### When to Use
+- Two independent groups measured on the same variable.
+- The data **violate the normality assumption** (e.g., heavily skewed distributions).
+- The data are **ordinal** rather than truly continuous.
+- **Small sample sizes** where the normality assumption cannot be verified.
+
+#### How It Works
+All observations from both groups are **pooled and ranked** together. The test compares the **sum of ranks** between the two groups. If one group consistently has higher values, its rank sum will be disproportionately large.
+
+#### Input
+- **Test variable** -- metric or ordinal variable.
+- **Grouping variable** -- nominal variable with exactly **2 groups**.
+- **Alternative hypothesis** -- choose between **two-sided** (groups differ), **greater** (group 1 > group 2), or **less** (group 1 < group 2).
+
+#### Results Tab
+- **U statistic** -- the test statistic based on rank sums.
+- **p-value** -- probability of observing this result under the null hypothesis of equal distributions.
+- **Group medians** and sample sizes.
+- **Rank-biserial correlation** -- effect size ranging from **-1 to +1**. Values near 0 indicate no difference; values near -1 or +1 indicate a large difference.
+
+#### Charts Tab
+- **Grouped box plot** -- compares the distributions of the two groups visually.
+        """)
+

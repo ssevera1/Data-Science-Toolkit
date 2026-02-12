@@ -88,3 +88,37 @@ def render():
             with c2:
                 fig = histogram_with_normal(pd.Series(result["residuals"]), "Residuals")
                 st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+Linear regression predicts a **continuous outcome** (dependent variable) from one or more **predictor variables** using **Ordinary Least Squares (OLS)** estimation.
+
+#### When to Use
+- The **dependent variable** is continuous (metric).
+- One or more **predictors** are metric (continuous).
+- The relationship between predictors and the outcome is expected to be **linear**.
+
+#### Results Tab
+- **Overall model F-test** -- tests whether the model as a whole explains a significant amount of variance (i.e., at least one predictor is useful).
+- **R-squared** -- proportion of variance in the DV explained by the predictors (0 to 1).
+- **Adjusted R-squared** -- R-squared corrected for the number of predictors; more appropriate for comparing models with different numbers of predictors.
+- **N** -- number of observations used.
+- **AIC (Akaike Information Criterion)** -- model fit measure; lower values indicate better fit (useful for model comparison).
+- **Coefficient table** for each predictor:
+    - **B (coefficient)** -- expected change in the DV for a one-unit increase in the predictor, holding all other predictors constant.
+    - **SE** -- standard error of the coefficient.
+    - **t** and **p** -- test whether the coefficient is significantly different from zero.
+    - **95% CI** -- confidence interval for the coefficient.
+
+#### Assumptions Tab
+- **Shapiro-Wilk on residuals** -- tests whether the **residuals** (prediction errors) are normally distributed. Violations may affect confidence intervals and p-values but not the coefficient estimates themselves.
+
+#### Charts Tab
+- **Scatter with regression line** (simple regression with one predictor) or **Actual vs. Predicted plot** (multiple regression) -- shows how well the model fits the data.
+- **Q-Q plot of residuals** -- points should follow the diagonal if residuals are normally distributed.
+- **Histogram of residuals** -- visualizes the distribution of residuals with a normal curve overlay.
+        """)
+

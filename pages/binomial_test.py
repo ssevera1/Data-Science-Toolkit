@@ -78,3 +78,30 @@ def render():
                 yaxis_title="Count",
             )
             st.plotly_chart(apply_theme(fig), use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+The binomial test determines whether the **observed proportion** of a binary variable significantly differs from a **hypothesized proportion**.
+
+#### When to Use
+- You have one variable with **exactly 2 categories** (e.g., success/failure, heads/tails, yes/no).
+- You want to test whether the observed proportion matches a specific expected value (e.g., 50/50, 70/30).
+
+#### Input
+- **Binary variable** -- a column with exactly 2 unique categories.
+- **Hypothesized proportion (p0)** -- the expected proportion of the first category under the null hypothesis. Default is **0.50** (equal split).
+
+#### Results Tab
+- **Observed proportion** -- the actual proportion of the first category in the data.
+- **p-value** -- probability of observing a proportion this extreme (or more) if the true proportion equals p0.
+- **N** -- total number of observations.
+- **Counts** for each category -- how many observations fall into each of the two categories.
+- **95% Confidence Interval for the proportion** -- range likely to contain the true population proportion.
+
+#### Charts Tab
+- **Bar chart** -- shows the frequency (count) of each category, providing a visual summary of the distribution.
+        """)
+

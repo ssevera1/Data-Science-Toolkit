@@ -91,3 +91,38 @@ def render():
         with tab_chart:
             fig = grouped_boxplot(clean, dv, group)
             st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+The independent samples t-test compares the **means of two independent (unrelated) groups** on a continuous variable to determine whether they differ significantly.
+
+#### When to Use
+- Two **separate groups** of participants are each measured on the **same continuous variable** (e.g., treatment vs. control, male vs. female).
+- The groups are **independent** -- different individuals in each group.
+
+#### Input
+- **Dependent variable** -- must be metric (continuous).
+- **Grouping variable** -- must be nominal with **exactly 2 groups**.
+
+#### Options
+- **Assume equal variances (Student's t)** -- uses pooled variance. Appropriate when group variances are similar.
+- **Unequal variances (Welch's t)** -- does not assume equal variances. Use this when Levene's test is significant (p < 0.05), indicating unequal group variances.
+
+#### Results Tab
+- **t-statistic** and **p-value** -- test whether the group means differ significantly.
+- **Degrees of freedom (df)** -- depends on sample sizes (and is adjusted for Welch's t).
+- **Group statistics** -- N, Mean, and SD for each group.
+- **Mean difference** with standard error and **95% confidence interval**.
+- **Cohen's d** -- standardized effect size: **small ~ 0.2**, **medium ~ 0.5**, **large ~ 0.8**.
+
+#### Assumptions Tab
+- **Shapiro-Wilk per group** -- tests normality within each group. The test is robust to violations with larger samples (N > 30 per group).
+- **Levene's test** -- tests **homogeneity of variances**. If significant (p < 0.05), the group variances are unequal and Welch's t-test should be used.
+
+#### Charts Tab
+- **Grouped box plot** -- compares the distributions of the two groups side by side.
+        """)
+

@@ -89,3 +89,35 @@ def render():
             with c2:
                 fig = group_means_bar(clean, dv, group)
                 st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+One-way ANOVA tests whether the **means differ across three or more independent groups**. It is an extension of the independent samples t-test to more than two groups.
+
+#### When to Use
+- One **continuous dependent variable** (DV).
+- One **categorical independent variable** (factor / grouping variable) with **3 or more groups**.
+- Groups are **independent** (different participants in each group).
+
+#### Results Tab
+- **F-statistic** and **p-value** -- test the overall null hypothesis that all group means are equal.
+- **Degrees of freedom** -- df between groups and df within groups.
+- **ANOVA table** -- displays Sum of Squares (SS), degrees of freedom (df), Mean Square (MS), F-statistic, and p-value for between-groups and within-groups sources.
+- **Group descriptives** -- N, Mean, and SD for each group.
+- **Effect sizes**:
+    - **Eta-squared** -- proportion of total variance explained by the factor. Interpretation: **small ~ 0.01**, **medium ~ 0.06**, **large ~ 0.14**.
+    - **Omega-squared** -- a less biased estimate of effect size, especially useful for small samples.
+- **Post-hoc tests (Tukey HSD)** -- pairwise comparisons that identify **which specific groups differ** from each other. Only displayed when the overall F-test is significant.
+
+#### Assumptions Tab
+- **Shapiro-Wilk per group** -- tests normality within each group. ANOVA is robust to moderate normality violations, especially with balanced designs and larger samples.
+- **Levene's test** -- tests **homogeneity of variances** across groups. If significant (p < 0.05), consider Welch's ANOVA or a non-parametric alternative (Kruskal-Wallis).
+
+#### Charts Tab
+- **Grouped box plot** -- compares distributions across all groups.
+- **Group means bar chart with error bars** -- visualizes mean differences between groups.
+        """)
+

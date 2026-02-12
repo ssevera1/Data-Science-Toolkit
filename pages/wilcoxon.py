@@ -77,3 +77,35 @@ def render():
                 diff = clean[var1] - clean[var2]
                 fig = histogram_with_normal(diff, "Differences")
                 st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+The Wilcoxon signed-rank test is a **non-parametric alternative to the paired samples t-test**. It compares two related measurements without assuming the differences are normally distributed.
+
+#### When to Use
+- **Paired data** (same subjects measured twice) that **violates the normality assumption**.
+- Ordinal or heavily skewed difference scores.
+- Small sample sizes where normality cannot be reliably assessed.
+
+#### How It Works
+The test computes the **differences** between paired observations, ranks the **absolute values** of those differences, and then compares the sum of ranks for positive vs. negative differences.
+
+#### Input
+- **Variable 1 and Variable 2** -- two metric variables representing paired observations.
+- **Alternative hypothesis** -- two-sided, greater, or less.
+
+#### Results Tab
+- **W statistic** -- the smaller of the positive and negative rank sums (or the test statistic variant used).
+- **p-value** -- significance of the difference between the two conditions.
+- **N (non-zero differences)** -- number of pairs where the difference is not zero (ties at zero are excluded).
+- **Medians** for both variables and the **median difference**.
+- **Effect size r** -- computed as r = Z / sqrt(N). Interpretation: **small ~ 0.1**, **medium ~ 0.3**, **large ~ 0.5**.
+
+#### Charts Tab
+- **Paired box plot** -- shows both variables' distributions side by side.
+- **Histogram of differences** -- visualizes the distribution of difference scores with a normal curve overlay.
+        """)
+

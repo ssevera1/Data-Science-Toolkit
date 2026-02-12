@@ -84,3 +84,36 @@ def render():
                 diff = clean[var1] - clean[var2]
                 fig = qq_plot(diff, "Differences")
                 st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+The paired samples t-test compares the **means of two related measurements** taken on the **same subjects** to determine whether they differ significantly.
+
+#### When to Use
+- **Pre/post designs** -- the same participants measured before and after an intervention.
+- **Matched pairs** -- each participant in one condition is matched with a participant in the other.
+- **Repeated measurements** -- the same individuals measured under two different conditions.
+
+#### Input
+- **Variable 1 and Variable 2** -- two metric (continuous) variables representing paired observations (e.g., Time 1 and Time 2, Condition A and Condition B).
+
+#### Results Tab
+- **t-statistic** and **p-value** -- test whether the mean of the differences is significantly different from zero.
+- **Degrees of freedom** -- N - 1, where N is the number of pairs.
+- **N (pairs)** -- number of complete pairs used in the analysis.
+- **Means** for both variables and the **mean difference** between them.
+- **SD of differences** -- standard deviation of the difference scores.
+- **95% Confidence Interval** for the mean difference.
+- **Cohen's d** -- standardized effect size: **small ~ 0.2**, **medium ~ 0.5**, **large ~ 0.8**.
+
+#### Assumptions Tab
+- **Shapiro-Wilk on the differences** -- tests whether the **difference scores** (Variable 1 minus Variable 2) are normally distributed. Robust to violations with N > 30 pairs.
+
+#### Charts Tab
+- **Paired box plot** -- shows the distribution of both variables side by side.
+- **Q-Q plot of differences** -- assesses normality of the difference scores; points should follow the diagonal if differences are normally distributed.
+        """)
+

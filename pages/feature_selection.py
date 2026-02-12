@@ -6,8 +6,8 @@ from utils.theme import page_header
 
 
 def _guard():
-    if "df" not in st.session_state:
-        st.warning("Upload a dataset on the **Home** page first.")
+    if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
+        st.warning("Upload a dataset on the **Home** page first, or enter data via **Statistics Tools > Data Input**.")
         st.stop()
 
 
@@ -179,3 +179,49 @@ def render():
                 st.success(f"Reduced to {len(keep)} columns.")
         else:
             st.info("Run the methods above to populate this summary.")
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Feature Selection — Identify the Most Important Features
+
+This page helps you rank and filter features using four complementary methods, then combine them into a unified ranking.
+
+---
+
+#### Configuration
+- **Target column** — the variable you want to predict.
+- **Task type** — auto-detected as Classification (categorical or <= 20 unique values) or Regression (continuous). You can override the auto-detection.
+- Only **numeric** feature columns are evaluated. Encode categorical features first using the Smart Cleaning page.
+
+#### Correlation Filter Tab
+- Computes the **absolute correlation** between each feature and the target variable.
+- Choose **Pearson** (linear relationship) or **Spearman** (monotonic/rank-based relationship).
+- A horizontal bar chart ranks features by correlation strength.
+- Set a **threshold** to drop features with weak correlation (e.g., |r| < 0.05).
+
+#### Mutual Information Tab
+- **Mutual Information (MI)** measures the **non-linear dependency** between each feature and the target.
+- Uses `mutual_info_classif` for classification tasks and `mutual_info_regression` for regression tasks.
+- MI is always >= 0. Higher values indicate stronger dependency. Unlike correlation, MI captures any kind of statistical relationship, not just linear ones.
+- Results are displayed as a ranked bar chart.
+
+#### Variance Threshold Tab
+- Computes the **variance** of each feature column.
+- Features with **very low variance** (near-constant) carry little predictive information and can be safely removed.
+- Set a **variance threshold** to identify features below that cutoff.
+- Common use case: removing features where almost all values are the same.
+
+#### RFE (Recursive Feature Elimination) Tab
+- Uses a **Random Forest** estimator to iteratively remove the least important features.
+- At each step, the model is trained, the least important feature is removed, and the process repeats until the desired number of features remains.
+- Configure the **number of features to select** with the slider.
+- Results show the ranking (1 = selected) and which features were kept.
+
+#### Summary Tab
+- Aggregates results from all methods run so far.
+- Each method's scores are **normalized to a 0-1 scale** for fair comparison.
+- An **Average Rank Score** is computed across all methods.
+- Use the **"Keep top N features"** slider to select the best features, then click to apply the selection and reduce your dataset to only those features plus the target column.
+        """)

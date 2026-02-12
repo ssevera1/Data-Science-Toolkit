@@ -8,8 +8,8 @@ from utils.theme import page_header
 
 
 def _guard():
-    if "df" not in st.session_state:
-        st.warning("Upload a dataset on the **Home** page first.")
+    if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
+        st.warning("Upload a dataset on the **Home** page first, or enter data via **Statistics Tools > Data Input**.")
         st.stop()
 
 
@@ -301,3 +301,41 @@ def render():
                 st.session_state["model_X"] = X
                 st.session_state["model_y"] = y_enc
                 st.session_state["feature_cols"] = feature_cols
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Model Arena — Benchmark Multiple Algorithms Side-by-Side
+
+This page trains and compares 10+ machine learning models using proper cross-validation to find the best one for your data.
+
+---
+
+#### Configuration
+- **Target column** — the variable to predict.
+- **Task type** — auto-detected as **Classification** (categorical target or <= 20 unique values) or **Regression** (continuous target). Override available.
+- **CV Folds** — number of cross-validation folds (2-10, default 5). Higher values give more robust estimates but take longer.
+
+#### Model Selection
+- **Classification models:** Logistic Regression, Random Forest, Gradient Boosting, XGBoost, LightGBM, SVM (RBF), K-Nearest Neighbors, Decision Tree, Naive Bayes, AdaBoost, Extra Trees.
+- **Regression models:** Linear Regression, Ridge, Lasso, ElasticNet, Random Forest, Gradient Boosting, XGBoost, LightGBM, SVR (RBF), K-Nearest Neighbors, Decision Tree, AdaBoost, Extra Trees.
+- Select or deselect individual models before benchmarking.
+
+#### Metrics
+- **Binary Classification:** Accuracy, F1 Score, Precision, Recall, ROC AUC.
+- **Multiclass Classification:** Accuracy, F1 Weighted, Precision Weighted, Recall Weighted.
+- **Regression:** R-squared (R2), Mean Squared Error (MSE), Mean Absolute Error (MAE).
+- Both the mean and standard deviation across CV folds are reported for each metric.
+
+#### Results
+- **Comparison Table** — all models ranked with their metric scores and training time.
+- **Primary Metric Bar Chart** — visual comparison using the most important metric (ROC AUC for binary classification, Accuracy for multiclass, R2 for regression).
+- **Radar Chart** (classification only) — overlays the top 5 models across all metrics on a polar chart for easy multi-metric comparison.
+- **Best Model** — highlighted with its primary metric score.
+
+#### Pipeline Details
+- All models use a **StandardScaler** preprocessing step to normalize features before training.
+- **Cross-validation** ensures results are not biased by a particular train/test split.
+- The best model info is stored in the session for use in other tools (e.g., Hyperparameter Tuning).
+        """)

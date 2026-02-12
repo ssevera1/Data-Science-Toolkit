@@ -77,3 +77,39 @@ def render():
             with c2:
                 fig = group_means_bar(clean, dv, within)
                 st.plotly_chart(fig, use_container_width=True)
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Purpose
+Repeated measures ANOVA compares **means across three or more related conditions** in a within-subjects design, where the **same participants** are measured under every condition.
+
+#### When to Use
+- The same subjects are measured under **3 or more conditions** (e.g., three time points, three dosage levels, three treatments).
+- The dependent variable is **continuous** (metric).
+
+#### Input
+- **Dependent variable (DV)** -- metric variable containing the measurements.
+- **Within-subjects factor** -- the column that identifies which condition each observation belongs to (e.g., "Time", "Treatment").
+- **Subject ID** -- a column that uniquely identifies each participant, so the analysis can match observations across conditions.
+
+#### Data Format
+Data must be in **long format** -- one row per observation. Each row contains:
+- The **subject identifier**
+- The **condition label**
+- The **measurement value**
+
+#### Results Tab
+- **ANOVA table** -- F-statistic and p-value testing whether at least one condition mean differs from the others.
+- **Group descriptives** -- N, Mean, and SD for each condition.
+- **Post-hoc pairwise comparisons (Bonferroni correction)** -- identifies which specific pairs of conditions differ significantly. Only shown when the overall test is significant.
+
+#### Assumptions Tab
+- **Mauchly's test of sphericity** -- tests whether the variances of the differences between all pairs of conditions are equal. If violated (p < 0.05), use the **Greenhouse-Geisser correction** to adjust the degrees of freedom and p-values.
+
+#### Charts Tab
+- **Grouped box plot** -- compares distributions across conditions.
+- **Group means bar chart** -- visualizes mean differences between conditions.
+        """)
+

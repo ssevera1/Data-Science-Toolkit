@@ -7,8 +7,8 @@ from utils.theme import page_header
 
 
 def _guard():
-    if "df" not in st.session_state:
-        st.warning("Upload a dataset on the **Home** page first.")
+    if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
+        st.warning("Upload a dataset on the **Home** page first, or enter data via **Statistics Tools > Data Input**.")
         st.stop()
 
 
@@ -246,3 +246,47 @@ def render():
         # Store best params
         st.session_state["best_params"] = best_params
         st.session_state["tuned_model"] = model_choice
+
+    # ── Page Guide ────────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("Page Guide & Explanation", expanded=False):
+        st.markdown("""
+#### Hyperparameter Tuning — Bayesian Optimization with Optuna
+
+This page uses Optuna's Bayesian optimization to efficiently search for the best hyperparameters for a chosen model.
+
+---
+
+#### Configuration
+- **Target column** — the variable to predict.
+- **Task type** — auto-detected (Classification or Regression), with manual override.
+- **Optimization metric** — the metric to maximize during tuning:
+  - Binary Classification: ROC AUC, Accuracy, F1, Precision, Recall.
+  - Multiclass Classification: Accuracy, F1 Weighted, Precision Weighted, Recall Weighted.
+  - Regression: R2, Neg. MSE, Neg. MAE.
+- **Model to tune** — choose from Random Forest, XGBoost, LightGBM, Gradient Boosting, SVM/SVR, or K-Nearest Neighbors.
+- **Number of trials** — how many hyperparameter combinations to evaluate (10-200, default 50). More trials generally find better parameters but take longer.
+- **CV folds** — cross-validation folds per trial (2-10, default 5).
+
+#### Optuna Bayesian Optimization
+- Uses the **Tree-structured Parzen Estimator (TPE)** algorithm, which builds a probabilistic model of the objective function to intelligently select the next hyperparameters to try.
+- Unlike grid search (exhaustive) or random search (blind), TPE **focuses on promising regions** of the hyperparameter space, finding good parameters faster.
+
+#### Supported Models and Tunable Parameters
+- **Random Forest** — n_estimators, max_depth, min_samples_split, min_samples_leaf, max_features.
+- **XGBoost** — n_estimators, max_depth, learning_rate, subsample, colsample_bytree, reg_alpha, reg_lambda.
+- **LightGBM** — n_estimators, max_depth, learning_rate, num_leaves, subsample, colsample_bytree, reg_alpha, reg_lambda.
+- **Gradient Boosting** — n_estimators, max_depth, learning_rate, subsample, min_samples_split.
+- **SVM / SVR** — C (regularization), kernel (rbf/poly/sigmoid), gamma (scale/auto).
+- **K-Nearest Neighbors** — n_neighbors, weights (uniform/distance), metric (euclidean/manhattan/minkowski).
+
+#### Results
+- **Best Hyperparameters** — displayed as JSON, showing the optimal values found.
+- **Optimization History** — scatter plot of each trial's score with a cumulative best line (red), showing how the search converges.
+- **Parameter Importance** — bar chart showing which hyperparameters had the most impact on performance.
+- **Parallel Coordinate Plot** — visualizes relationships between numeric hyperparameters and the objective score across all trials.
+
+#### Pipeline Details
+- Each trial trains the model inside a **StandardScaler + Model pipeline** with cross-validation.
+- Best parameters are stored in the session for reference.
+        """)
