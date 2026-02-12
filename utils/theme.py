@@ -32,6 +32,7 @@ DARK_COLORS = {
     "table_even_row": "rgba(26,26,46,0.5)",
     "scrollbar_track": "#0e1117",
     "footer_text": "#555",
+    "drift_highlight": "#3d1f1f",
     # Data viz colorway
     "viz": [
         "#4ea8ff", "#38bdf8", "#3498db", "#2ecc71",
@@ -61,6 +62,7 @@ LIGHT_COLORS = {
     "table_even_row": "rgba(237,231,217,0.5)",
     "scrollbar_track": "#F6F0E2",
     "footer_text": "#888",
+    "drift_highlight": "#fde8e8",
     # Data viz colorway
     "viz": [
         "#0089EC", "#00B845", "#FF8027", "#FED60E",

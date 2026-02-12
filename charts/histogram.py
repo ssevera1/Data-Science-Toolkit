@@ -11,6 +11,13 @@ def histogram_with_normal(series, name, title=None, bins=None):
     data = series.dropna().values
     colors = get_chart_colors()
 
+    if len(data) == 0:
+        fig = go.Figure()
+        fig.update_layout(title=title or f"Distribution of {name}",
+                          annotations=[dict(text="No data available", showarrow=False,
+                                            xref="paper", yref="paper", x=0.5, y=0.5)])
+        return apply_theme(fig)
+
     fig = go.Figure()
 
     # Histogram

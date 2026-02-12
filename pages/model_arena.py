@@ -138,11 +138,9 @@ def render():
 
         for i, model_name in enumerate(selected_models):
             status.write(f"Training **{model_name}**...")
-            progress.progress((i) / len(selected_models))
+            progress.progress((i + 1) / len(selected_models))
 
             try:
-                model = _get_model(model_name, task) if False else None  # placeholder
-
                 # Build model
                 if task == "Classification":
                     from sklearn.linear_model import LogisticRegression
@@ -277,34 +275,32 @@ def render():
                 best = valid.iloc[0]
                 st.success(f"Best model: **{best['Model']}** with {primary} = {best[primary]:.4f}")
 
-            # Radar chart for classification
-            if task == "Classification" and primary in res_df.columns and len(valid) > 1:
-                if is_binary:
-                    metrics = ["Accuracy", "F1", "Precision", "Recall", "Roc Auc"]
-                else:
-                    metrics = ["Accuracy", "F1 Weighted", "Precision Weighted", "Recall Weighted"]
-                avail_metrics = [m for m in metrics if m in valid.columns]
-                if len(avail_metrics) >= 3:
-                    fig = go.Figure()
-                    for _, row in valid.head(5).iterrows():
-                        values = [row.get(m, 0) for m in avail_metrics]
-                        values.append(values[0])  # close the polygon
-                        fig.add_trace(go.Scatterpolar(
-                            r=values,
-                            theta=avail_metrics + [avail_metrics[0]],
-                            name=row["Model"],
-                        ))
-                    fig.update_layout(
-                        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-                        height=500,
-                        title="Top 5 Models — Radar Chart",
-                    )
-                    st.plotly_chart(fig, width="stretch")
+                # Radar chart for classification
+                if task == "Classification" and len(valid) > 1:
+                    if is_binary:
+                        metrics = ["Accuracy", "F1", "Precision", "Recall", "Roc Auc"]
+                    else:
+                        metrics = ["Accuracy", "F1 Weighted", "Precision Weighted", "Recall Weighted"]
+                    avail_metrics = [m for m in metrics if m in valid.columns]
+                    if len(avail_metrics) >= 3:
+                        fig = go.Figure()
+                        for _, row in valid.head(5).iterrows():
+                            values = [row.get(m, 0) for m in avail_metrics]
+                            values.append(values[0])  # close the polygon
+                            fig.add_trace(go.Scatterpolar(
+                                r=values,
+                                theta=avail_metrics + [avail_metrics[0]],
+                                name=row["Model"],
+                            ))
+                        fig.update_layout(
+                            polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                            height=500,
+                            title="Top 5 Models — Radar Chart",
+                        )
+                        st.plotly_chart(fig, width="stretch")
 
-            # Store best model info
-            if primary in res_df.columns:
-                best_name = valid.iloc[0]["Model"]
-                st.session_state["best_model_name"] = best_name
+                # Store best model info
+                st.session_state["best_model_name"] = valid.iloc[0]["Model"]
                 st.session_state["model_map_task"] = task
                 st.session_state["model_X"] = X
                 st.session_state["model_y"] = y_enc

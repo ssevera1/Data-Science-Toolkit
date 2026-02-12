@@ -84,7 +84,7 @@ def _auto_detect_type(col, df):
         if n_unique <= 10:
             set_var_type(col, "Nominal")
         else:
-            set_var_type(col, "Nominal")
+            set_var_type(col, "Text")
 
 
 def add_column():

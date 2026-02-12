@@ -142,7 +142,7 @@ def render():
 
             # Color code
             _c = get_colors()
-            _drift_bg = "#3d1f1f" if _c["bg_primary"] == "#0e1117" else "#fde8e8"
+            _drift_bg = _c["drift_highlight"]
             def highlight_drift(row):
                 if row["Drift Detected"]:
                     return [f"background-color: {_drift_bg}"] * len(row)

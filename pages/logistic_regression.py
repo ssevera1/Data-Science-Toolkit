@@ -65,8 +65,6 @@ def render():
                     clean[c] = pd.to_numeric(clean[c], errors="coerce")
                 clean = clean.dropna()
 
-                x_range = np.linspace(clean[predictors[0]].min(), clean[predictors[0]].max(), 200)
-
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=clean[predictors[0]], y=clean[dv],
