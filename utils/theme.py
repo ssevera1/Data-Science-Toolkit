@@ -338,9 +338,7 @@ def inject_global_css():
     .hero-title {{
         font-size: 3rem;
         font-weight: 700;
-        background: {accent_grad};
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: {c['accent_primary']};
         margin: 0.5rem 0;
         line-height: 1.2;
     }}
@@ -393,9 +391,7 @@ def inject_global_css():
         padding: 2rem 0 1rem 0;
     }}
     .app-footer span {{
-        background: {accent_grad};
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: {c['accent_primary']};
         font-weight: 600;
     }}
 
@@ -643,9 +639,7 @@ def page_header(title: str, description: str, icon: str = ""):
                 <h1 style="
                     font-size:2rem;
                     font-weight:700;
-                    background:{accent_grad};
-                    -webkit-background-clip:text;
-                    -webkit-text-fill-color:transparent;
+                    color:{c['accent_primary']};
                     margin:0;
                 ">{title}</h1>
             </div>

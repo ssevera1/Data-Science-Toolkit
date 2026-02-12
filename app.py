@@ -44,9 +44,7 @@ st.sidebar.markdown(
         <div style="
             font-size:1.6rem;
             font-weight:700;
-            background:{accent_grad};
-            -webkit-background-clip:text;
-            -webkit-text-fill-color:transparent;
+            color:{c['accent_primary']};
         ">DS Power Tools</div>
         <p style="color:{c['text_muted']};font-size:0.8rem;margin-top:0.25rem;">
             Data Science &amp; Statistics Toolkit

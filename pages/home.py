@@ -116,9 +116,7 @@ def render():
         ">
             <h2 style="
                 margin:0 0 0.25rem 0;
-                background:{accent_grad};
-                -webkit-background-clip:text;
-                -webkit-text-fill-color:transparent;
+                color:{c['accent_primary']};
                 font-size:1.5rem;
             ">Import Your Data</h2>
             <p style="color:{c['text_muted']};margin:0;font-size:0.95rem;">
