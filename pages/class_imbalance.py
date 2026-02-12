@@ -63,6 +63,9 @@ def render():
     st.subheader("3. Apply Resampling")
 
     feature_cols = [c for c in num_cols if c != target]
+    cat_cols = [c for c in all_cols if c not in num_cols and c != target]
+    all_feature_cols = [c for c in all_cols if c != target]
+
     if not feature_cols:
         st.warning("Need numeric feature columns for resampling. Encode categorical features first (Smart Cleaning page).")
         st.stop()
@@ -74,34 +77,55 @@ def render():
         "SMOTE + Tomek Links (Combined)",
     ])
 
-    X = df[feature_cols].fillna(0)
     y = df[target]
+    uses_smote = method.startswith("SMOTE")
 
     if st.button("Apply Resampling"):
         with st.spinner("Resampling..."):
             try:
-                if method.startswith("SMOTE ("):
-                    from imblearn.over_sampling import SMOTE
-                    min_class_count = y.value_counts().min()
-                    k = min(5, min_class_count - 1) if min_class_count > 1 else 1
-                    sampler = SMOTE(random_state=42, k_neighbors=k)
-                elif method == "Random Oversampling":
-                    from imblearn.over_sampling import RandomOverSampler
-                    sampler = RandomOverSampler(random_state=42)
-                elif method == "Random Undersampling":
-                    from imblearn.under_sampling import RandomUnderSampler
-                    sampler = RandomUnderSampler(random_state=42)
-                else:  # SMOTE + Tomek
-                    from imblearn.combine import SMOTETomek
-                    min_class_count = y.value_counts().min()
-                    k = min(5, min_class_count - 1) if min_class_count > 1 else 1
-                    from imblearn.over_sampling import SMOTE as SMOTE2
-                    sampler = SMOTETomek(random_state=42, smote=SMOTE2(k_neighbors=k))
+                if uses_smote:
+                    # SMOTE requires numeric input — encode categoricals temporarily
+                    X = df[feature_cols].fillna(0)
+                    if method.startswith("SMOTE ("):
+                        from imblearn.over_sampling import SMOTE
+                        min_class_count = y.value_counts().min()
+                        k = min(5, min_class_count - 1) if min_class_count > 1 else 1
+                        sampler = SMOTE(random_state=42, k_neighbors=k)
+                    else:  # SMOTE + Tomek
+                        from imblearn.combine import SMOTETomek
+                        min_class_count = y.value_counts().min()
+                        k = min(5, min_class_count - 1) if min_class_count > 1 else 1
+                        from imblearn.over_sampling import SMOTE as SMOTE2
+                        sampler = SMOTETomek(random_state=42, smote=SMOTE2(k_neighbors=k))
 
-                X_res, y_res = sampler.fit_resample(X, y)
+                    X_res, y_res = sampler.fit_resample(X, y)
+                    new_df = pd.DataFrame(X_res, columns=feature_cols)
+                    new_df[target] = y_res
 
-                new_df = pd.DataFrame(X_res, columns=feature_cols)
-                new_df[target] = y_res
+                    # For synthetic rows, fill categoricals from the nearest original row
+                    if cat_cols:
+                        from sklearn.neighbors import NearestNeighbors
+                        nn = NearestNeighbors(n_neighbors=1).fit(X.values)
+                        indices = nn.kneighbors(X_res, return_distance=False).ravel()
+                        for col in cat_cols:
+                            new_df[col] = df[col].iloc[indices].values
+                        # Reorder columns to match original
+                        new_df = new_df[[c for c in df.columns if c in new_df.columns]]
+                else:
+                    # Random over/undersampling — works on all column types
+                    X_all = df[all_feature_cols]
+                    if method == "Random Oversampling":
+                        from imblearn.over_sampling import RandomOverSampler
+                        sampler = RandomOverSampler(random_state=42)
+                    else:
+                        from imblearn.under_sampling import RandomUnderSampler
+                        sampler = RandomUnderSampler(random_state=42)
+
+                    X_res, y_res = sampler.fit_resample(X_all, y)
+                    new_df = pd.DataFrame(X_res, columns=all_feature_cols)
+                    new_df[target] = y_res
+                    # Reorder columns to match original
+                    new_df = new_df[[c for c in df.columns if c in new_df.columns]]
 
                 # Show comparison
                 st.markdown("#### Before vs After")
