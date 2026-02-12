@@ -38,18 +38,27 @@ def _render_tool_cards(tools, c, card_grad, prefix):
     page_map = st.session_state.get("_page_map", {})
     rows = [tools[i:i + 3] for i in range(0, len(tools), 3)]
     for row_idx, row in enumerate(rows):
+        # Render the row as a single CSS-grid HTML block so all cards share equal height
+        row_html = ""
+        for icon, title, desc, _url in row:
+            row_html += (
+                f'<div style="background:{card_grad};border-radius:14px;padding:1.25rem;'
+                f'border:1px solid {c["border"]};">'
+                f'<span style="font-size:1.8rem;display:block;margin-bottom:0.5rem;">{icon}</span>'
+                f'<h3 style="margin-top:0;color:{c["text_bright"]};font-size:1.05rem;">{title}</h3>'
+                f'<p style="color:{c["text_muted"]};font-size:0.9rem;line-height:1.5;margin-bottom:0;">{desc}</p>'
+                f'</div>'
+            )
+        ncols = len(row)
+        st.markdown(
+            f'<div style="display:grid;grid-template-columns:repeat({ncols},1fr);gap:1rem;'
+            f'align-items:stretch;margin-bottom:0.25rem;">{row_html}</div>',
+            unsafe_allow_html=True,
+        )
+        # Navigation buttons below the cards
         cols = st.columns(3)
-        for col_idx, (icon, title, desc, url_path) in enumerate(row):
+        for col_idx, (_, title, _, url_path) in enumerate(row):
             with cols[col_idx]:
-                st.markdown(
-                    f'<div style="background:{card_grad};border-radius:14px;padding:1.25rem 1.25rem 0.75rem 1.25rem;'
-                    f'border:1px solid {c["border"]};min-height:170px;display:flex;flex-direction:column;">'
-                    f'<span style="font-size:1.8rem;display:block;margin-bottom:0.5rem;">{icon}</span>'
-                    f'<h3 style="margin-top:0;color:{c["text_bright"]};font-size:1.05rem;">{title}</h3>'
-                    f'<p style="color:{c["text_muted"]};font-size:0.9rem;line-height:1.5;margin-bottom:0;flex:1;">{desc}</p>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
                 page_obj = page_map.get(url_path)
                 if page_obj is not None:
                     if st.button(f"Open {title}", key=f"{prefix}_{row_idx}_{col_idx}", width="stretch"):
