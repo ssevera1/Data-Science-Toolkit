@@ -606,6 +606,39 @@ def inject_global_css():
         color: {c['text_muted']} !important;
     }}
 
+    /* ── Spinner (spinning circle while processing) ────────────── */
+    .stSpinner > div {{
+        border-top-color: {c['accent_primary']} !important;
+    }}
+    .stSpinner svg circle {{
+        stroke: {c['accent_primary']} !important;
+    }}
+    .stSpinner svg {{
+        color: {c['accent_primary']} !important;
+        fill: {c['accent_primary']} !important;
+    }}
+    .stSpinner > div > span {{
+        color: {c['text_body']} !important;
+    }}
+
+    /* ── Status widget (top-right running/emoji indicator) ──────── */
+    [data-testid="stStatusWidget"] svg {{
+        fill: {c['text_body']} !important;
+        stroke: {c['text_body']} !important;
+        color: {c['text_body']} !important;
+    }}
+    [data-testid="stStatusWidget"] button {{
+        color: {c['text_body']} !important;
+    }}
+    [data-testid="stStatusWidget"] i,
+    [data-testid="stStatusWidget"] span {{
+        color: {c['text_body']} !important;
+    }}
+    [data-testid="stStatusWidget"] button svg {{
+        fill: {c['text_muted']} !important;
+        stroke: {c['text_muted']} !important;
+    }}
+
     /* ── Multi-select tags ──────────────────────────────────────── */
     [data-baseweb="tag"] {{
         background-color: {c['hover_bg']} !important;
