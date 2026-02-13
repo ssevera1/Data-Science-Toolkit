@@ -16,7 +16,8 @@ def shapiro_wilk(data, alpha=ALPHA):
 
     # Shapiro-Wilk has a limit of 5000
     if len(data) > 5000:
-        data = np.random.choice(data, 5000, replace=False)
+        rng = np.random.RandomState(42)
+        data = rng.choice(data, 5000, replace=False)
 
     stat, p = stats.shapiro(data)
     return {

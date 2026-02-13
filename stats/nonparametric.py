@@ -17,17 +17,24 @@ def mann_whitney(group1, group2, alternative="two-sided", alpha=0.05):
     # Rank-biserial correlation
     r_rb = rank_biserial(U_stat, len(g1), len(g2))
 
+    # Compute mean ranks
+    n1, n2 = len(g1), len(g2)
+    combined = np.concatenate([g1, g2])
+    ranks = stats.rankdata(combined)
+    mean_rank1 = ranks[:n1].mean()
+    mean_rank2 = ranks[n1:].mean()
+
     return {
         "test": "Mann-Whitney U Test",
         "U": U_stat,
         "p": p_value,
         "rank_biserial": r_rb,
-        "n1": len(g1),
-        "n2": len(g2),
+        "n1": n1,
+        "n2": n2,
         "median1": np.median(g1),
         "median2": np.median(g2),
-        "mean_rank1": None,  # Will compute below
-        "mean_rank2": None,
+        "mean_rank1": mean_rank1,
+        "mean_rank2": mean_rank2,
         "alternative": alternative,
     }
 
@@ -57,8 +64,12 @@ def wilcoxon_signed_rank(data1, data2, alternative="two-sided", alpha=0.05):
 
     # Effect size: r = Z / sqrt(N)
     n = len(diff_nonzero)
-    z_score = stats.norm.ppf(1 - p_value / 2)  # approximate Z
-    r_effect = z_score / np.sqrt(n) if n > 0 else 0
+    # Compute Z directly from the test statistic (more accurate than back-calculating from p)
+    rank_sum = n * (n + 1) / 2
+    expected = rank_sum / 2
+    var = n * (n + 1) * (2 * n + 1) / 24
+    z_score = (W_stat - expected) / np.sqrt(var) if var > 0 else 0.0
+    r_effect = abs(z_score) / np.sqrt(n) if n > 0 else 0
 
     return {
         "test": "Wilcoxon Signed-Rank Test",
@@ -86,10 +97,10 @@ def kruskal_wallis(df, value_col, group_col, alpha=0.05):
 
     H_stat, p_value = stats.kruskal(*groups)
 
-    # Effect size: epsilon-squared = H / ((n^2 - 1)/(n + 1))
+    # Effect size: epsilon-squared = H / (n - 1)
     n = len(clean)
     k = len(groups)
-    epsilon_sq = (H_stat - k + 1) / (n - k) if (n - k) > 0 else 0
+    epsilon_sq = H_stat / (n - 1) if n > 1 else 0
 
     # Post-hoc: Dunn's test
     posthoc = None

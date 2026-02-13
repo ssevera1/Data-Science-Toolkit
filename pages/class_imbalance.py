@@ -98,19 +98,25 @@ def render():
                         from imblearn.over_sampling import SMOTE as SMOTE2
                         sampler = SMOTETomek(random_state=42, smote=SMOTE2(k_neighbors=k))
 
+                    X_arr = X.values
                     X_res, y_res = sampler.fit_resample(X, y)
-                    new_df = pd.DataFrame(X_res, columns=feature_cols)
-                    new_df[target] = y_res
+                    X_res_arr = X_res.values if isinstance(X_res, pd.DataFrame) else X_res
+
+                    # Build result columns dict, then create DataFrame once
+                    result = {col: X_res_arr[:, i] for i, col in enumerate(feature_cols)}
+                    result[target] = y_res.values if isinstance(y_res, pd.Series) else y_res
 
                     # For synthetic rows, fill categoricals from the nearest original row
                     if cat_cols:
                         from sklearn.neighbors import NearestNeighbors
-                        nn = NearestNeighbors(n_neighbors=1).fit(X.values)
-                        indices = nn.kneighbors(X_res, return_distance=False).ravel()
+                        nn = NearestNeighbors(n_neighbors=1).fit(X_arr)
+                        indices = nn.kneighbors(X_res_arr, return_distance=False).ravel()
                         for col in cat_cols:
-                            new_df[col] = df[col].iloc[indices].values
-                        # Reorder columns to match original
-                        new_df = new_df[[c for c in df.columns if c in new_df.columns]]
+                            result[col] = df[col].iloc[indices].values
+
+                    new_df = pd.DataFrame(result)
+                    # Reorder columns to match original
+                    new_df = new_df[[c for c in df.columns if c in new_df.columns]]
                 else:
                     # Random over/undersampling — works on all column types
                     X_all = df[all_feature_cols]
@@ -122,10 +128,10 @@ def render():
                         sampler = RandomUnderSampler(random_state=42)
 
                     X_res, y_res = sampler.fit_resample(X_all, y)
-                    new_df = pd.DataFrame(X_res, columns=all_feature_cols)
-                    new_df[target] = y_res
-                    # Reorder columns to match original
-                    new_df = new_df[[c for c in df.columns if c in new_df.columns]]
+                    result = pd.DataFrame(X_res, columns=all_feature_cols)
+                    result[target] = y_res
+                    # Reorder columns to match original and defragment
+                    new_df = result[[c for c in df.columns if c in result.columns]].copy()
 
                 # Show comparison
                 st.markdown("#### Before vs After")

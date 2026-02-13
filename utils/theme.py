@@ -111,8 +111,8 @@ def register_plotly_theme():
         colorway=c["viz"],
         legend=dict(bgcolor="rgba(0,0,0,0)"),
     )
-    pio.templates["ds_dark"] = tpl
-    pio.templates.default = "ds_dark"
+    pio.templates["ds_tools"] = tpl
+    pio.templates.default = "ds_tools"
 
 
 # Register once at import time (dark defaults)
@@ -617,10 +617,14 @@ def inject_global_css():
     st.markdown(css, unsafe_allow_html=True)
 
 
-def _hex_to_rgb(hex_color: str) -> str:
+def hex_to_rgb(hex_color: str) -> str:
     """Convert '#RRGGBB' to 'R,G,B' string for use in rgba()."""
     h = hex_color.lstrip("#")
     return f"{int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)}"
+
+
+# Backwards-compatible alias
+_hex_to_rgb = hex_to_rgb
 
 
 # ── Page Header ──────────────────────────────────────────────────────────────

@@ -1,17 +1,4 @@
-"""Application constants: colors, variable types, test names."""
-
-# Brand colors (dark theme)
-ACCENT_PRIMARY = "#667eea"
-ACCENT_SECONDARY = "#764ba2"
-DARK_BG = "#0e1117"
-CARD_BG = "#1a1a2e"
-WHITE = "#ffffff"
-TEXT_BODY = "#e0e0e0"
-TEXT_MUTED = "#a0a0b8"
-BORDER = "#2a2a4a"
-GREEN = "#2ecc71"
-RED = "#e74c3c"
-YELLOW = "#f39c12"
+"""Application constants: variable types, test names, thresholds."""
 
 # Variable types
 VARIABLE_TYPES = ["Metric", "Nominal", "Ordinal"]

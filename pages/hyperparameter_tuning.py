@@ -114,7 +114,7 @@ def render():
                     "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True),
                 }
                 cls = XGBClassifier if task == "Classification" else XGBRegressor
-                model = cls(**params, random_state=42, verbosity=0, use_label_encoder=False)
+                model = cls(**params, random_state=42, verbosity=0)
 
             elif model_choice == "LightGBM":
                 from lightgbm import LGBMClassifier, LGBMRegressor

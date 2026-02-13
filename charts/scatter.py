@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 from charts.theme import apply_theme, get_chart_colors
+from utils.theme import get_colors, hex_to_rgb
 
 
 def correlation_scatter(df, x_col, y_col, r_value=None, title=None):
@@ -30,13 +31,14 @@ def correlation_scatter(df, x_col, y_col, r_value=None, title=None):
     )
 
     if r_value is not None:
+        c = get_colors()
         fig.add_annotation(
             text=f"r = {r_value:.3f}",
             xref="paper", yref="paper",
             x=0.05, y=0.95,
             showarrow=False,
             font=dict(size=14, color=colors[0]),
-            bgcolor="rgba(255,255,255,0.8)",
+            bgcolor=f"rgba({hex_to_rgb(c['bg_card'])},0.9)",
             bordercolor=colors[0],
             borderwidth=1,
             borderpad=4,

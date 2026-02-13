@@ -60,9 +60,9 @@ def render():
                 names = pf.get_feature_names_out(sel)
                 # Only add new features (exclude originals)
                 new_feats = pd.DataFrame(transformed, columns=names, index=df.index)
-                for c in new_feats.columns:
-                    if c not in df.columns:
-                        df[c] = new_feats[c]
+                new_only = new_feats[[c for c in new_feats.columns if c not in df.columns]]
+                if len(new_only.columns) > 0:
+                    df = pd.concat([df, new_only], axis=1)
                 st.session_state["df"] = df
                 added = len(new_feats.columns) - len(sel) - (1 if include_bias else 0)
                 st.success(f"Added {added} polynomial features. New shape: {df.shape}")
@@ -86,24 +86,19 @@ def render():
                         "Please reduce the number of columns or operations (max 1,000 features)."
                     )
                     st.stop()
-                new_count = 0
+                new_cols = {}
                 for a, b in combinations(sel, 2):
                     if "Multiply" in ops:
-                        name = f"{a}_x_{b}"
-                        df[name] = df[a] * df[b]
-                        new_count += 1
+                        new_cols[f"{a}_x_{b}"] = df[a] * df[b]
                     if "Divide" in ops:
-                        name = f"{a}_div_{b}"
-                        df[name] = df[a] / df[b].replace(0, np.nan)
-                        new_count += 1
+                        new_cols[f"{a}_div_{b}"] = df[a] / df[b].replace(0, np.nan)
                     if "Add" in ops:
-                        name = f"{a}_plus_{b}"
-                        df[name] = df[a] + df[b]
-                        new_count += 1
+                        new_cols[f"{a}_plus_{b}"] = df[a] + df[b]
                     if "Subtract" in ops:
-                        name = f"{a}_minus_{b}"
-                        df[name] = df[a] - df[b]
-                        new_count += 1
+                        new_cols[f"{a}_minus_{b}"] = df[a] - df[b]
+                new_count = len(new_cols)
+                if new_cols:
+                    df = pd.concat([df, pd.DataFrame(new_cols, index=df.index)], axis=1)
                 st.session_state["df"] = df
                 st.success(f"Added {new_count} interaction features. New shape: {df.shape}")
                 st.dataframe(df.head(), width="stretch")
@@ -168,7 +163,8 @@ def render():
                         elif feat == "day_of_year":
                             df[name] = dt.dt.dayofyear
                         elif feat == "week_of_year":
-                            df[name] = dt.dt.isocalendar().week.astype(int)
+                            week = dt.dt.isocalendar().week
+                            df[name] = pd.to_numeric(week, errors="coerce").astype("Int64")
                 st.session_state["df"] = df
                 st.success(f"Extracted {len(sel) * len(features)} datetime features.")
                 st.dataframe(df.head(), width="stretch")

@@ -165,7 +165,7 @@ def render():
                     try:
                         from xgboost import XGBClassifier
                         model_map["XGBoost"] = XGBClassifier(n_estimators=100, random_state=42,
-                                                              use_label_encoder=False, eval_metric="mlogloss",
+                                                              eval_metric="mlogloss",
                                                               verbosity=0)
                     except ImportError:
                         pass
@@ -227,7 +227,6 @@ def render():
                     val = scores.mean()
                     if "neg_" in key:
                         val = -val
-                        display_key = display_key
                     row[display_key] = round(val, 4)
                     row[f"{display_key} Std"] = round(scores.std(), 4)
 

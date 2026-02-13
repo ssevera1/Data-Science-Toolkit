@@ -4,7 +4,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from core.state import set_var_type
-from utils.theme import get_colors
+from utils.theme import get_colors, hex_to_rgb, _is_light
 
 
 def _auto_detect_var_types(df):
@@ -26,11 +26,6 @@ def _auto_detect_var_types(df):
                 set_var_type(col, "Metric")
         else:
             set_var_type(col, "Nominal")
-
-
-def _hex_to_rgb(hex_color: str) -> str:
-    h = hex_color.lstrip("#")
-    return f"{int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)}"
 
 
 def _render_tool_cards(tools, c, card_grad, prefix):
@@ -67,11 +62,12 @@ def _render_tool_cards(tools, c, card_grad, prefix):
 
 def render():
     c = get_colors()
+    light = _is_light()
     accent_grad = f"linear-gradient(90deg,{c['title_gradient_start']} 0%,{c['title_gradient_end']} 100%)"
-    card_grad = f"linear-gradient(135deg,{c['bg_card']} 0%,{c['bg_sidebar']} 100%)"
-    accent_bg_start = f"rgba({_hex_to_rgb(c['title_gradient_start'])},0.12)"
-    accent_bg_end = f"rgba({_hex_to_rgb(c['title_gradient_end'])},0.08)"
-    accent_border = f"rgba({_hex_to_rgb(c['accent_primary'])},0.3)"
+    card_grad = f"linear-gradient(135deg,{c['bg_card']} 0%,{c['bg_card']} 100%)" if light else f"linear-gradient(135deg,{c['bg_card']} 0%,{c['bg_sidebar']} 100%)"
+    accent_bg_start = f"rgba({hex_to_rgb(c['title_gradient_start'])},0.12)"
+    accent_bg_end = f"rgba({hex_to_rgb(c['title_gradient_end'])},0.08)"
+    accent_border = f"rgba({hex_to_rgb(c['accent_primary'])},0.3)"
 
     # ── Hero Section ──────────────────────────────────────────────────────
     # Hero image — change the path below to display your own logo/banner.

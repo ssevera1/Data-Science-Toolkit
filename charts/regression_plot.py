@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import numpy as np
 import statsmodels.api as sm
 from charts.theme import apply_theme, get_chart_colors
-from utils.theme import get_colors
+from utils.theme import get_colors, hex_to_rgb
 
 
 def regression_scatter(df, x_col, y_col, title=None):
@@ -49,8 +49,8 @@ def regression_scatter(df, x_col, y_col, title=None):
         x=np.concatenate([x_sorted, x_sorted[::-1]]),
         y=np.concatenate([pred_summary["mean_ci_upper"], pred_summary["mean_ci_lower"][::-1]]),
         fill="toself",
-        fillcolor=f"rgba({_hex_to_rgb(c['bg_card'])},0.15)",
-        line=dict(color="rgba(255,255,255,0)"),
+        fillcolor=f"rgba({hex_to_rgb(c['bg_card'])},0.15)",
+        line=dict(color="rgba(0,0,0,0)"),
         name="95% CI",
     ))
 
@@ -90,8 +90,3 @@ def multi_regression_actual_vs_predicted(y_actual, y_predicted, title=None):
         yaxis_title="Actual",
     )
     return apply_theme(fig)
-
-
-def _hex_to_rgb(hex_color: str) -> str:
-    h = hex_color.lstrip("#")
-    return f"{int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)}"

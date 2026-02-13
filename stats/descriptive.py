@@ -14,7 +14,7 @@ def compute_descriptives(series):
 
     result = {
         "N": int(len(data)),
-        "Missing": int(series.isna().sum() + (pd.to_numeric(series, errors="coerce").isna().sum() - series.isna().sum())),
+        "Missing": int(pd.to_numeric(series, errors="coerce").isna().sum()),
         "Mean": data.mean(),
         "Median": data.median(),
         "Mode": data.mode().iloc[0] if len(data.mode()) > 0 else np.nan,

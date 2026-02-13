@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from utils.theme import page_header, set_matplotlib_dark
+from utils.theme import page_header, set_matplotlib_theme
 
 
 def _guard():
@@ -28,7 +28,7 @@ def train_model(_X, _y, model_name, _task, feature_hash):
     elif model_name == "XGBoost":
         from xgboost import XGBClassifier, XGBRegressor
         cls = XGBClassifier if _task == "Classification" else XGBRegressor
-        model = cls(n_estimators=100, random_state=42, verbosity=0, use_label_encoder=False)
+        model = cls(n_estimators=100, random_state=42, verbosity=0)
     elif model_name == "LightGBM":
         from lightgbm import LGBMClassifier, LGBMRegressor
         cls = LGBMClassifier if _task == "Classification" else LGBMRegressor
@@ -44,7 +44,7 @@ def train_model(_X, _y, model_name, _task, feature_hash):
 
 def render():
     page_header("Model Explainability", "SHAP values, feature importance, and partial dependence — understand any model's decisions.", "🔍")
-    set_matplotlib_dark()
+    set_matplotlib_theme()
 
     _guard()
     df = st.session_state["df"].copy()
@@ -101,7 +101,9 @@ def render():
     )
 
     # ── Train the model ────────────────────────────────────────────────────────
-    feature_hash = hash(tuple(feature_cols) + (len(X),))
+    import hashlib
+    data_bytes = pd.util.hash_pandas_object(pd.DataFrame(X, columns=feature_cols)).values.tobytes()
+    feature_hash = hashlib.md5(data_bytes).hexdigest()
 
     with st.spinner("Training model..."):
         model, scaler, X_scaled = train_model(X, y, model_choice, task, feature_hash)

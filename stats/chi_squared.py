@@ -18,7 +18,6 @@ def chi_squared_test(df, var1, var2, alpha=0.05):
 
     # Effect size: Cramer's V
     n = contingency.values.sum()
-    min_dim = min(contingency.shape) - 1
     v = cramers_v(chi2, n, min(contingency.shape))
 
     # Expected frequencies table

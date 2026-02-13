@@ -20,11 +20,15 @@ def pearson_correlation(x, y, alpha=0.05):
     df = n - 2
 
     # Confidence interval for r using Fisher's z transformation
-    z_r = np.arctanh(r)
-    se_z = 1 / np.sqrt(n - 3) if n > 3 else np.inf
-    z_crit = stats.norm.ppf(1 - alpha / 2)
-    ci_lower = np.tanh(z_r - z_crit * se_z)
-    ci_upper = np.tanh(z_r + z_crit * se_z)
+    r_clamped = np.clip(r, -0.9999999, 0.9999999)  # prevent arctanh(±1) = ±inf
+    z_r = np.arctanh(r_clamped)
+    if n > 3:
+        se_z = 1 / np.sqrt(n - 3)
+        z_crit = stats.norm.ppf(1 - alpha / 2)
+        ci_lower = float(np.tanh(z_r - z_crit * se_z))
+        ci_upper = float(np.tanh(z_r + z_crit * se_z))
+    else:
+        ci_lower, ci_upper = -1.0, 1.0
 
     # R-squared
     r_squared = r ** 2
@@ -62,11 +66,15 @@ def spearman_correlation(x, y, alpha=0.05):
     n = len(x_clean)
 
     # CI using Fisher's z (approximation)
-    z_r = np.arctanh(rho)
-    se_z = 1 / np.sqrt(n - 3) if n > 3 else np.inf
-    z_crit = stats.norm.ppf(1 - alpha / 2)
-    ci_lower = np.tanh(z_r - z_crit * se_z)
-    ci_upper = np.tanh(z_r + z_crit * se_z)
+    rho_clamped = np.clip(rho, -0.9999999, 0.9999999)
+    z_r = np.arctanh(rho_clamped)
+    if n > 3:
+        se_z = 1 / np.sqrt(n - 3)
+        z_crit = stats.norm.ppf(1 - alpha / 2)
+        ci_lower = float(np.tanh(z_r - z_crit * se_z))
+        ci_upper = float(np.tanh(z_r + z_crit * se_z))
+    else:
+        ci_lower, ci_upper = -1.0, 1.0
 
     return {
         "test": "Spearman Correlation",
