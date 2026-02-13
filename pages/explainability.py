@@ -185,9 +185,16 @@ def render():
                     explainer = shap.KernelExplainer(model.predict, X_sample[:50])
                     shap_values = explainer.shap_values(X_sample)
 
-                # Handle multi-class
+                # Handle multi-class: shap_values may be a list (one array
+                # per class) or a 3-D ndarray (samples × features × classes).
+                is_multiclass = False
                 if isinstance(shap_values, list):
+                    is_multiclass = len(shap_values) > 1
                     shap_vals = np.abs(np.array(shap_values)).mean(axis=0)
+                elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
+                    is_multiclass = True
+                    # Average absolute SHAP across classes → (samples, features)
+                    shap_vals = np.abs(shap_values).mean(axis=-1)
                 else:
                     shap_vals = shap_values
 
@@ -226,6 +233,13 @@ def render():
                 fig, ax = plt.subplots(figsize=(10, 4))
                 if isinstance(shap_values, list):
                     shap.force_plot(explainer.expected_value[0], shap_values[0][pred_idx],
+                                    features=X_sample[pred_idx], feature_names=feature_cols,
+                                    matplotlib=True, show=False)
+                elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
+                    # Use first class for the force plot
+                    ev = explainer.expected_value
+                    ev0 = ev[0] if isinstance(ev, (list, np.ndarray)) else ev
+                    shap.force_plot(ev0, shap_values[:, :, 0][pred_idx],
                                     features=X_sample[pred_idx], feature_names=feature_cols,
                                     matplotlib=True, show=False)
                 else:

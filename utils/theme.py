@@ -606,6 +606,57 @@ def inject_global_css():
         color: {c['text_muted']} !important;
     }}
 
+    /* ── Emoji icons — prevent black square ────────────────────── */
+    .emoji-icon {{
+        color: initial !important;
+        background: transparent !important;
+    }}
+
+    /* ── JSON viewer ────────────────────────────────────────────── */
+    [data-testid="stJson"],
+    [data-testid="stJson"] > div {{
+        background-color: {c['bg_card']} !important;
+        color: {c['text_body']} !important;
+        border-radius: 8px;
+    }}
+    [data-testid="stJson"] pre {{
+        background-color: {c['bg_card']} !important;
+        color: {c['text_body']} !important;
+    }}
+    /* react-json-view overrides */
+    [data-testid="stJson"] .react-json-view {{
+        background-color: {c['bg_card']} !important;
+        color: {c['text_body']} !important;
+    }}
+    [data-testid="stJson"] .object-key {{
+        color: {c['accent_primary']} !important;
+    }}
+    [data-testid="stJson"] .string-value {{
+        color: {c['success']} !important;
+    }}
+    [data-testid="stJson"] .integer-value,
+    [data-testid="stJson"] .float-value {{
+        color: {c['info']} !important;
+    }}
+
+    /* ── Code blocks ────────────────────────────────────────────── */
+    [data-testid="stCode"],
+    .stCodeBlock,
+    .stCodeBlock code {{
+        background-color: {c['bg_card']} !important;
+        color: {c['text_body']} !important;
+    }}
+    pre:not([data-testid="stJson"] pre) {{
+        background-color: {c['bg_card']} !important;
+        color: {c['text_body']} !important;
+    }}
+
+    /* ── Plotly chart containers ────────────────────────────────── */
+    [data-testid="stPlotlyChart"],
+    .stPlotlyChart {{
+        background-color: transparent !important;
+    }}
+
     /* ── Spinner (spinning circle while processing) ────────────── */
     .stSpinner > div {{
         border-top-color: {c['accent_primary']} !important;
@@ -668,7 +719,7 @@ def page_header(title: str, description: str, icon: str = ""):
     title = html.escape(title)
     description = html.escape(description)
     icon = html.escape(icon)
-    icon_html = f'<span style="font-size:2rem;margin-right:0.5rem;">{icon}</span>' if icon else ""
+    icon_html = f'<span class="emoji-icon" style="font-size:2rem;margin-right:0.5rem;line-height:1;">{icon}</span>' if icon else ""
     accent_grad = f"linear-gradient(90deg,{c['title_gradient_start']} 0%,{c['title_gradient_end']} 100%)"
     st.markdown(
         f"""
@@ -704,7 +755,7 @@ def metric_card(label: str, value: str, icon: str = ""):
     label = html.escape(label)
     value = html.escape(value)
     icon = html.escape(icon)
-    icon_html = f'<span style="font-size:1.5rem;margin-right:0.5rem;">{icon}</span>' if icon else ""
+    icon_html = f'<span class="emoji-icon" style="font-size:1.5rem;margin-right:0.5rem;line-height:1;">{icon}</span>' if icon else ""
     card_grad = f"linear-gradient(135deg,{c['bg_card']} 0%,{c['bg_sidebar']} 100%)" if not light else f"linear-gradient(135deg,{c['bg_card']} 0%,{c['bg_card']} 100%)"
     st.markdown(
         f"""
