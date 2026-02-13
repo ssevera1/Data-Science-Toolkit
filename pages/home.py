@@ -78,11 +78,12 @@ def render():
     if os.path.exists(HERO_IMAGE):
         _hero_col1, _hero_col2, _hero_col3 = st.columns([1, 2, 1])
         with _hero_col2:
+            st.markdown('<div style="margin-top:1rem;"></div>', unsafe_allow_html=True)
             st.image(HERO_IMAGE, width="stretch")
 
     st.markdown(
         f"""
-        <div style="text-align:center;padding:2rem 0 1.5rem 0;">
+        <div style="text-align:center; padding-top: 0rem; padding-bottom: 0; margin-top: -2rem;">
             <div class="hero-badge">⚡ Open-Source Data Science &amp; Statistics Toolkit</div>
             <div class="hero-title">DS Power Tools</div>
             <p style="font-size:1.15rem;color:{c['text_muted']};margin:0.5rem auto 0 auto;max-width:700px;text-align:center;">
@@ -224,6 +225,7 @@ def render():
         ("📊", "Two-Way ANOVA", "Test effects of two factors and their interaction.", "twoway-anova"),
         ("🔄", "Repeated Measures ANOVA", "Compare means across related conditions (within-subjects).", "repeated-anova"),
         ("🔀", "Mixed ANOVA", "Test within-subjects and between-subjects factors together.", "mixed-anova"),
+        ("📊", "MANOVA", "Test group differences across multiple dependent variables simultaneously.", "manova"),
         ("📉", "Mann-Whitney U", "Non-parametric alternative to the independent t-test.", "mann-whitney"),
         ("📉", "Wilcoxon Signed-Rank", "Non-parametric alternative to the paired t-test.", "wilcoxon"),
         ("📉", "Kruskal-Wallis", "Non-parametric alternative to one-way ANOVA.", "kruskal-wallis"),
@@ -232,6 +234,7 @@ def render():
         ("🔵", "Spearman Correlation", "Measure the monotonic relationship using ranks.", "spearman"),
         ("📐", "Linear Regression", "Predict a continuous outcome from predictors (OLS).", "linear-regression"),
         ("📐", "Logistic Regression", "Predict a binary outcome from predictors.", "logistic-regression"),
+        ("📐", "Multivariate Regression", "Predict multiple outcomes from predictor variables.", "multivariate-regression"),
         ("🔲", "Chi-Squared Test", "Test association between two categorical variables.", "chi-squared"),
         ("🎯", "Binomial Test", "Test whether a proportion matches a hypothesized value.", "binomial"),
     ]

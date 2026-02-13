@@ -85,6 +85,8 @@ from pages import pearson_correlation
 from pages import spearman_correlation
 from pages import linear_regression
 from pages import logistic_regression
+from pages import manova
+from pages import multivariate_regression
 from pages import chi_squared_test
 from pages import binomial_test
 
@@ -122,6 +124,7 @@ pages = {
         _page(twoway_anova.render, "Two-Way ANOVA", "twoway-anova", "📊"),
         _page(repeated_anova.render, "Repeated Measures ANOVA", "repeated-anova", "🔄"),
         _page(mixed_anova.render, "Mixed ANOVA", "mixed-anova", "🔀"),
+        _page(manova.render, "MANOVA", "manova", "📊"),
         _page(mann_whitney.render, "Mann-Whitney U", "mann-whitney", "📉"),
         _page(wilcoxon.render, "Wilcoxon Signed-Rank", "wilcoxon", "📉"),
         _page(kruskal_wallis.render, "Kruskal-Wallis", "kruskal-wallis", "📉"),
@@ -130,6 +133,7 @@ pages = {
         _page(spearman_correlation.render, "Spearman Correlation", "spearman", "🔵"),
         _page(linear_regression.render, "Linear Regression", "linear-regression", "📐"),
         _page(logistic_regression.render, "Logistic Regression", "logistic-regression", "📐"),
+        _page(multivariate_regression.render, "Multivariate Regression", "multivariate-regression", "📐"),
         _page(chi_squared_test.render, "Chi-Squared Test", "chi-squared", "🔲"),
         _page(binomial_test.render, "Binomial Test", "binomial", "🎯"),
     ],
