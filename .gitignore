@@ -22,9 +22,11 @@ env/
 .DS_Store
 Thumbs.db
 desktop.ini
+nul
 
 # Streamlit
 streamlit_output.log
+streamlit_stderr.log
 
 # Secrets / credentials
 .env
