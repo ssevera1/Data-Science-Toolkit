@@ -11,6 +11,17 @@ def _guard():
         st.stop()
 
 
+def _sanitize_csv(dataframe):
+    """Prefix formula-trigger characters to prevent CSV injection in Excel."""
+    _dangerous = ("=", "+", "-", "@", "\t", "\r")
+    out = dataframe.copy()
+    for col in out.select_dtypes(include=["object", "category"]).columns:
+        out[col] = out[col].apply(
+            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _dangerous else v
+        )
+    return out
+
+
 def render():
     page_header("Feature Selection", "Find the best features using correlation filters, mutual information, variance threshold, and RFE.", "🎯")
 
@@ -166,7 +177,7 @@ def render():
 
             st.dataframe(summary, width="stretch")
 
-            csv_data = summary.to_csv().encode("utf-8")
+            csv_data = _sanitize_csv(summary).to_csv().encode("utf-8")
             st.download_button(
                 "Download Rankings CSV",
                 data=csv_data,
@@ -184,7 +195,7 @@ def render():
             dl_col, apply_col = st.columns(2)
             with dl_col:
                 selected_df = df[top_features + [target_col]]
-                sel_csv = selected_df.to_csv(index=False).encode("utf-8")
+                sel_csv = _sanitize_csv(selected_df).to_csv(index=False).encode("utf-8")
                 st.download_button(
                     "Download Selected Features CSV",
                     data=sel_csv,

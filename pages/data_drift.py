@@ -13,6 +13,17 @@ MAX_ROWS = 500_000
 MAX_COLS = 500
 
 
+def _sanitize_csv(dataframe):
+    """Prefix formula-trigger characters to prevent CSV injection in Excel."""
+    _dangerous = ("=", "+", "-", "@", "\t", "\r")
+    out = dataframe.copy()
+    for col in out.select_dtypes(include=["object", "category"]).columns:
+        out[col] = out[col].apply(
+            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _dangerous else v
+        )
+    return out
+
+
 def _load_upload(file, label):
     """Load an uploaded file with size and shape guards."""
     if file.size > MAX_SIZE_MB * 1024 * 1024:
@@ -151,7 +162,7 @@ def render():
             st.dataframe(drift_df.style.apply(highlight_drift, axis=1),
                          width="stretch", hide_index=True)
 
-            drift_csv = drift_df.to_csv(index=False).encode("utf-8")
+            drift_csv = _sanitize_csv(drift_df).to_csv(index=False).encode("utf-8")
             st.download_button(
                 "Download Numeric Drift CSV",
                 data=drift_csv,
@@ -199,7 +210,7 @@ def render():
             cat_df = pd.DataFrame(cat_results).sort_values("Chi2 p-value")
             st.dataframe(cat_df, width="stretch", hide_index=True)
 
-            cat_csv = cat_df.to_csv(index=False).encode("utf-8")
+            cat_csv = _sanitize_csv(cat_df).to_csv(index=False).encode("utf-8")
             st.download_button(
                 "Download Categorical Drift CSV",
                 data=cat_csv,

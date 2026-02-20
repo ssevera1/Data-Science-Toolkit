@@ -15,6 +15,17 @@ def _guard():
         st.stop()
 
 
+def _sanitize_csv(dataframe):
+    """Prefix formula-trigger characters to prevent CSV injection in Excel."""
+    _dangerous = ("=", "+", "-", "@", "\t", "\r")
+    out = dataframe.copy()
+    for col in out.select_dtypes(include=["object", "category"]).columns:
+        out[col] = out[col].apply(
+            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _dangerous else v
+        )
+    return out
+
+
 @st.cache_resource
 def train_model(_X, _y, model_name, _task, feature_hash):
     from sklearn.preprocessing import StandardScaler
@@ -127,7 +138,7 @@ def render():
 
             st.dataframe(imp_df, width="stretch", hide_index=True)
 
-            csv_data = imp_df.to_csv(index=False).encode("utf-8")
+            csv_data = _sanitize_csv(imp_df).to_csv(index=False).encode("utf-8")
             st.download_button(
                 "Download Importance CSV",
                 data=csv_data,
@@ -212,7 +223,7 @@ def render():
                                   yaxis=dict(autorange="reversed"))
                 st.plotly_chart(fig, width="stretch")
 
-                shap_csv = shap_df.to_csv(index=False).encode("utf-8")
+                shap_csv = _sanitize_csv(shap_df).to_csv(index=False).encode("utf-8")
                 st.download_button(
                     "Download SHAP Summary CSV",
                     data=shap_csv,

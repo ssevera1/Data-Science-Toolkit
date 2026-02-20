@@ -12,6 +12,17 @@ def _guard():
         st.stop()
 
 
+def _sanitize_csv(dataframe):
+    """Prefix formula-trigger characters to prevent CSV injection in Excel."""
+    _dangerous = ("=", "+", "-", "@", "\t", "\r")
+    out = dataframe.copy()
+    for col in out.select_dtypes(include=["object", "category"]).columns:
+        out[col] = out[col].apply(
+            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _dangerous else v
+        )
+    return out
+
+
 def render():
     page_header("Hyperparameter Tuning", "Bayesian optimization via Optuna — find optimal hyperparameters with live trial visualization.", "🎛️")
 
@@ -247,7 +258,7 @@ def render():
         st.markdown("#### Export")
         dl1, dl2 = st.columns(2)
         with dl1:
-            hist_csv = hist_df.drop(columns=["params"], errors="ignore").to_csv(index=False).encode("utf-8")
+            hist_csv = _sanitize_csv(hist_df.drop(columns=["params"], errors="ignore")).to_csv(index=False).encode("utf-8")
             st.download_button(
                 "Download Trial History CSV",
                 data=hist_csv,

@@ -13,6 +13,17 @@ def _guard():
         st.stop()
 
 
+def _sanitize_csv(dataframe):
+    """Prefix formula-trigger characters to prevent CSV injection in Excel."""
+    _dangerous = ("=", "+", "-", "@", "\t", "\r")
+    out = dataframe.copy()
+    for col in out.select_dtypes(include=["object", "category"]).columns:
+        out[col] = out[col].apply(
+            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _dangerous else v
+        )
+    return out
+
+
 def render():
     page_header("Model Arena", "Benchmark 10+ algorithms side-by-side with proper cross-validation. Find your best model in one click.", "🏟️")
 
@@ -247,7 +258,7 @@ def render():
             st.subheader("Results")
             st.dataframe(res_df, width="stretch", hide_index=True)
 
-            csv_data = res_df.to_csv(index=False).encode("utf-8")
+            csv_data = _sanitize_csv(res_df).to_csv(index=False).encode("utf-8")
             st.download_button(
                 "Download Results CSV",
                 data=csv_data,
