@@ -79,7 +79,7 @@ def render():
         _hero_col1, _hero_col2, _hero_col3 = st.columns([1, 2, 1])
         with _hero_col2:
             st.markdown('<div style="margin-top:1rem;"></div>', unsafe_allow_html=True)
-            st.image(HERO_IMAGE, width="stretch")
+            st.image(HERO_IMAGE, use_container_width=True)
 
     st.markdown(
         f"""
