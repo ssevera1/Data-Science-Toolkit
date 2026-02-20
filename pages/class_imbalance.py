@@ -123,10 +123,26 @@ def render():
                         if n_resampled > n_original:
                             from sklearn.neighbors import NearestNeighbors
                             X_arr = X.values
-                            nn = NearestNeighbors(n_neighbors=1).fit(X_arr)
-                            synth_indices = nn.kneighbors(
-                                X_res_arr[n_original:], return_distance=False
-                            ).ravel()
+                            X_synth = X_res_arr[n_original:]
+                            y_res_arr = y_res.values if isinstance(y_res, pd.Series) else y_res
+                            y_synth = y_res_arr[n_original:]
+
+                            # Fit KNN per class on same-class originals only.
+                            # Synthetic samples are interpolations of minority
+                            # class points, so categoricals should come from
+                            # the nearest original of the SAME class.
+                            synth_indices = np.empty(len(X_synth), dtype=int)
+                            for cls in np.unique(y_synth):
+                                synth_mask = y_synth == cls
+                                orig_positions = np.where(y.values == cls)[0]
+                                nn = NearestNeighbors(n_neighbors=1).fit(
+                                    X_arr[orig_positions]
+                                )
+                                local_idx = nn.kneighbors(
+                                    X_synth[synth_mask], return_distance=False
+                                ).ravel()
+                                synth_indices[synth_mask] = orig_positions[local_idx]
+
                             for col in cat_cols:
                                 synth_vals = df[col].iloc[synth_indices].values
                                 result_df[col] = np.concatenate([original_cat_vals[col], synth_vals])
