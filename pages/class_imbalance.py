@@ -80,6 +80,14 @@ def render():
     y = df[target]
     uses_smote = method.startswith("SMOTE")
 
+    # Warn about large datasets with SMOTE methods
+    if uses_smote and len(df) > 50_000:
+        st.warning(
+            f"Dataset has {len(df):,} rows. SMOTE methods build nearest-neighbor "
+            f"models that scale poorly on large datasets. Consider using Random "
+            f"Over/Undersampling, or subsample your data first."
+        )
+
     if st.button("Apply Resampling"):
         with st.spinner("Resampling..."):
             try:
@@ -98,25 +106,35 @@ def render():
                         from imblearn.over_sampling import SMOTE as SMOTE2
                         sampler = SMOTETomek(random_state=42, smote=SMOTE2(k_neighbors=k))
 
-                    X_arr = X.values
                     X_res, y_res = sampler.fit_resample(X, y)
                     X_res_arr = X_res.values if isinstance(X_res, pd.DataFrame) else X_res
 
-                    # Build result columns dict, then create DataFrame once
-                    result = {col: X_res_arr[:, i] for i, col in enumerate(feature_cols)}
-                    result[target] = y_res.values if isinstance(y_res, pd.Series) else y_res
+                    # Build result DataFrame directly from the array
+                    result_df = pd.DataFrame(X_res_arr, columns=feature_cols)
+                    result_df[target] = y_res.values if isinstance(y_res, pd.Series) else y_res
 
-                    # For synthetic rows, fill categoricals from the nearest original row
+                    # Original rows keep their own categoricals — only synthetic
+                    # rows need a KNN lookup to inherit categorical values
                     if cat_cols:
-                        from sklearn.neighbors import NearestNeighbors
-                        nn = NearestNeighbors(n_neighbors=1).fit(X_arr)
-                        indices = nn.kneighbors(X_res_arr, return_distance=False).ravel()
-                        for col in cat_cols:
-                            result[col] = df[col].iloc[indices].values
+                        n_original = len(X)
+                        n_resampled = len(X_res_arr)
+                        original_cat_vals = {col: df[col].values for col in cat_cols}
 
-                    new_df = pd.DataFrame(result)
-                    # Reorder columns to match original
-                    new_df = new_df[[c for c in df.columns if c in new_df.columns]]
+                        if n_resampled > n_original:
+                            from sklearn.neighbors import NearestNeighbors
+                            X_arr = X.values
+                            nn = NearestNeighbors(n_neighbors=1).fit(X_arr)
+                            synth_indices = nn.kneighbors(
+                                X_res_arr[n_original:], return_distance=False
+                            ).ravel()
+                            for col in cat_cols:
+                                synth_vals = df[col].iloc[synth_indices].values
+                                result_df[col] = np.concatenate([original_cat_vals[col], synth_vals])
+                        else:
+                            for col in cat_cols:
+                                result_df[col] = original_cat_vals[col][:n_resampled]
+
+                    new_df = result_df[[c for c in df.columns if c in result_df.columns]]
                 else:
                     # Random over/undersampling — works on all column types
                     X_all = df[all_feature_cols]
@@ -179,8 +197,8 @@ def render():
                         st.success("Dataset updated with resampled data.")
                         st.rerun()
 
-            except Exception:
-                st.error("Resampling failed. Please check that the target column and features are suitable for the selected method.")
+            except Exception as e:
+                st.error(f"Resampling failed: {e}")
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()
