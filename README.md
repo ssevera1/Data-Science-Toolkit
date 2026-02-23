@@ -106,6 +106,7 @@ If no file exists at the specified path, the image section is simply hidden.
 - **Data Science tools** — Upload a CSV or Excel file on the Home page (up to 200 MB). Your dataset persists across all DS tool pages via the sidebar navigation.
 - **Statistics tools** — Navigate to "Data Input" under Statistics Tools. Enter data manually in the table editor, paste from a spreadsheet, or upload a separate file. Data persists across all statistical test pages.
 - Both toolsets maintain separate data — uploading for one doesn't affect the other.
+- **All data is held in memory only** — nothing is written to disk. Your dataset lives in Streamlit's session state for the duration of the browser session and is automatically discarded when you close the tab or restart the server.
 
 ---
 
