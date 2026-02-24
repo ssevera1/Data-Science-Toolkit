@@ -17,12 +17,12 @@ Created by Scott Severance. Licensed under MIT.
 
 ```
 app.py                      Entry point: theme, navigation, state init
-pages/       (32 modules)   View layer — one page per tool/test
+pages/       (33 modules)   View layer — one page per tool/test
 core/        (4 modules)    State management, data I/O, validation, constants
 stats/       (13 modules)   Statistical computation (pure functions, no Streamlit imports)
 charts/      (7 modules)    Plotly chart generation
 components/  (4 modules)    Reusable UI widgets (variable selectors, result cards)
-utils/       (2 modules)    Dual-theme CSS system
+utils/       (3 modules)    Dual-theme CSS system, PDF export engine
 design/                     C4 architecture diagrams and ADRs
 ```
 
@@ -33,14 +33,18 @@ design/                     C4 architecture diagrams and ADRs
 - **All statistical functions return a dict** with keys: `test_name`, `statistic`, `p_value`, `effect_size`, `effect_size_label`, `interpretation`, `assumptions`
 - **Shared state lives in `st.session_state`** — the DataFrame is at `st.session_state["df"]`, variable types at `st.session_state["stats_var_types"]`
 - **Theme is at `st.session_state["app_theme"]`** — either "Light" or "Dark"
+- **utils/pdf_export.py must NEVER import streamlit** — it is a pure rendering module
 
 ### Data Flow
 
 ```
 User uploads file → core/data_manager.py loads + auto-detects types
-  → st.session_state["df"] shared across all 32 pages
+  → st.session_state["df"] shared across all pages
     → pages/ call stats/ for computation, charts/ for visualization
       → components/results_display.py renders formatted output
+      → "Add to Report" → core/state.log_result() → session report log
+      → "Export PDF" → utils/pdf_export.generate_single_report() → download
+  → pages/export_report.py → utils/pdf_export.generate_full_report() → combined PDF
 ```
 
 ## Conventions
@@ -66,7 +70,18 @@ Every statistics page follows this structure:
 - Variable selection via `components/variable_selector.py`
 - Input validation via `core/validators.py`
 - Three tabs: Results, Assumptions, Charts
+- PDF export section: "Include chart" checkbox, "Add to Report" button, "Export PDF" download button
 - Expandable page guide at bottom
+
+### Adding PDF Export to a New Page
+
+1. Add imports: `from core.state import log_result` and `from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df`
+2. After the results tabs, add a divider and build a log entry via `build_log_entry()` with the page's `entry_type`, result dict, serialized tables, and variables
+3. Add checkbox for chart inclusion, "Add to Report" button (calls `log_result()`), and `st.download_button` (calls `generate_single_report()`)
+4. Add a type-specific renderer in `utils/pdf_export.py` and register it in the `_RENDERERS` dict
+5. Handle `log_result()` returning `False` (log full at 100 entries) with an error message
+
+Phase 1 pages with PDF export: independent t-test, paired t-test, one-sample t-test, one-way ANOVA, Pearson correlation, descriptive statistics, Model Arena, feature selection. Remaining pages use the fallback renderer.
 
 ### Theming
 
@@ -81,7 +96,7 @@ Every statistics page follows this structure:
 | File | Purpose |
 |---|---|
 | `app.py` | Entry point, all page registration, sidebar |
-| `core/state.py` | `init_state()`, session state defaults |
+| `core/state.py` | `init_state()`, session state defaults, report log (`log_result`, `get_report_log`, `clear_report_log`) |
 | `core/data_manager.py` | File loading, variable type auto-detection, export with formula injection prevention |
 | `core/validators.py` | Input validation functions |
 | `core/constants.py` | Alpha=0.05, variable types, test categories |
@@ -91,6 +106,8 @@ Every statistics page follows this structure:
 | `components/variable_selector.py` | Type-aware column dropdowns |
 | `utils/theme.py` | Global CSS injection for dual themes |
 | `charts/theme.py` | Plotly template registration per theme |
+| `utils/pdf_export.py` | PDF rendering engine: `_DSReport` FPDF subclass, type-specific renderers, `build_log_entry()`, `generate_single_report()`, `generate_full_report()` |
+| `pages/export_report.py` | Report Builder page: review/select/remove saved results, download combined PDF |
 | `.streamlit/config.toml` | Server config: localhost-only, 200MB upload limit, no telemetry |
 
 ## Common Pitfalls
@@ -104,6 +121,8 @@ Every statistics page follows this structure:
 - **CSV formula injection**: Every CSV export **must** go through `_sanitize_csv()` which prefixes formula-trigger characters (`= + - @ \t \r`) with `'`. Never use bare `.to_csv()` in a download button. This is already enforced in all pages — maintain it when adding new exports.
 - **KNN on large datasets**: When using `sklearn.NearestNeighbors`, fit on the smallest applicable subset (e.g., minority class only for SMOTE categoricals, same-class only for Tomek links). Fitting on the full dataset with 20+ dimensions triggers O(n×m) brute-force computation that scales catastrophically. The SMOTE categorical KNN in `class_imbalance.py` uses per-class fitting for this reason.
 - **Prefer numpy indexing over pandas `.iloc`**: For bulk index lookups (e.g., `df[col].iloc[indices].values`), use `df[col].values[indices]` instead. Direct numpy fancy indexing avoids pandas overhead and is ~10x faster per call, which compounds over many columns.
+- **PDF text encoding**: `utils/pdf_export.py` uses Helvetica (PDF core font, latin-1 only). All text passed to FPDF must go through `_sanitize_text()` which replaces Unicode characters (em-dash, Greek letters, smart quotes, etc.) with ASCII equivalents and strips anything else. Never pass raw user strings to `pdf.cell()` or `pdf.multi_cell()` without sanitization.
+- **Report log limits**: `log_result()` caps `st.session_state["report_log"]` at 100 entries to prevent memory exhaustion. Chart images are size-guarded at 2 MB (figure dict) and 5 MB (rendered PNG) in `embed_chart()`. Always check the `bool` return value of `log_result()` and show an error when full.
 
 ## Library Usage
 
@@ -119,3 +138,5 @@ Every statistics page follows this structure:
 | SHAP | Model explainability |
 | Plotly | All interactive charts in statistics tools |
 | Matplotlib / Seaborn | Only where upstream libraries (SHAP, sklearn) output them directly |
+| fpdf2 | PDF report generation (`utils/pdf_export.py`); pure Python, no system dependencies |
+| kaleido | Plotly static image export (`fig.to_image()`) for embedding charts in PDFs |
