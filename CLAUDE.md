@@ -81,7 +81,20 @@ Every statistics page follows this structure:
 4. Add a type-specific renderer in `utils/pdf_export.py` and register it in the `_RENDERERS` dict
 5. Handle `log_result()` returning `False` (log full at 100 entries) with an error message
 
-Phase 1 pages with PDF export: independent t-test, paired t-test, one-sample t-test, one-way ANOVA, Pearson correlation, descriptive statistics, Model Arena, feature selection. Remaining pages use the fallback renderer.
+All 22 statistics/DS pages have PDF export. The `_RENDERERS` dispatch table in `pdf_export.py` maps 22 entry types to 11 renderer functions:
+- `_render_ttest_family` — independent_ttest, paired_ttest, one_sample_ttest
+- `_render_anova` — oneway_anova
+- `_render_anova_general` — twoway_anova, repeated_anova, mixed_anova
+- `_render_manova` — manova
+- `_render_correlation` — pearson_correlation, spearman_correlation
+- `_render_nonparametric` — mann_whitney, wilcoxon, kruskal_wallis, friedman
+- `_render_regression` — linear_regression, logistic_regression
+- `_render_multivariate_regression` — multivariate_regression
+- `_render_chi_squared` — chi_squared
+- `_render_binomial` — binomial
+- `_render_descriptive` — descriptive_stats
+- `_render_model_arena` — model_arena
+- `_render_feature_selection` — feature_selection
 
 ### Theming
 
@@ -97,7 +110,7 @@ Phase 1 pages with PDF export: independent t-test, paired t-test, one-sample t-t
 |---|---|
 | `app.py` | Entry point, all page registration, sidebar |
 | `core/state.py` | `init_state()`, session state defaults, report log (`log_result`, `get_report_log`, `clear_report_log`) |
-| `core/data_manager.py` | File loading, variable type auto-detection, export with formula injection prevention |
+| `core/data_manager.py` | File loading, variable type auto-detection, export with formula injection prevention, shared `sanitize_csv()` |
 | `core/validators.py` | Input validation functions |
 | `core/constants.py` | Alpha=0.05, variable types, test categories |
 | `stats/assumptions.py` | Shapiro-Wilk, Levene's, Mauchly's, Henze-Zirkler, Box's M |
@@ -118,11 +131,14 @@ Phase 1 pages with PDF export: independent t-test, paired t-test, one-sample t-t
 - **Variable type detection**: The auto-detection heuristic uses fixed thresholds (e.g., <=2 unique numeric → Nominal, 3-7 sparse → Ordinal). These won't be correct for all datasets.
 - **Effect sizes are mandatory**: Every statistical test must report an appropriate effect size. This is a deliberate design decision, not optional.
 - **No external network calls**: The app must never make HTTP requests, download models, or phone home. This is a core privacy guarantee.
-- **CSV formula injection**: Every CSV export **must** go through `_sanitize_csv()` which prefixes formula-trigger characters (`= + - @ \t \r`) with `'`. Never use bare `.to_csv()` in a download button. This is already enforced in all pages — maintain it when adding new exports.
+- **CSV formula injection**: Every CSV export **must** go through `sanitize_csv()` from `core/data_manager.py` which prefixes formula-trigger characters (`= + - @ \t \r`) with `'`. Never use bare `.to_csv()` in a download button. Import as `from core.data_manager import sanitize_csv as _sanitize_csv`. This is the single shared implementation — do NOT define local copies in pages.
 - **KNN on large datasets**: When using `sklearn.NearestNeighbors`, fit on the smallest applicable subset (e.g., minority class only for SMOTE categoricals, same-class only for Tomek links). Fitting on the full dataset with 20+ dimensions triggers O(n×m) brute-force computation that scales catastrophically. The SMOTE categorical KNN in `class_imbalance.py` uses per-class fitting for this reason.
 - **Prefer numpy indexing over pandas `.iloc`**: For bulk index lookups (e.g., `df[col].iloc[indices].values`), use `df[col].values[indices]` instead. Direct numpy fancy indexing avoids pandas overhead and is ~10x faster per call, which compounds over many columns.
-- **PDF text encoding**: `utils/pdf_export.py` uses Helvetica (PDF core font, latin-1 only). All text passed to FPDF must go through `_sanitize_text()` which replaces Unicode characters (em-dash, Greek letters, smart quotes, etc.) with ASCII equivalents and strips anything else. Never pass raw user strings to `pdf.cell()` or `pdf.multi_cell()` without sanitization.
-- **Report log limits**: `log_result()` caps `st.session_state["report_log"]` at 100 entries to prevent memory exhaustion. Chart images are size-guarded at 2 MB (figure dict) and 5 MB (rendered PNG) in `embed_chart()`. Always check the `bool` return value of `log_result()` and show an error when full.
+- **PDF text encoding**: `utils/pdf_export.py` uses Helvetica (PDF core font, latin-1 only). All text passed to FPDF must go through `_sanitize_text()` which replaces Unicode characters (em-dash, Greek letters including chi/rho/beta/sigma/lambda, smart quotes, etc.) with ASCII equivalents and strips anything else. Never pass raw user strings to `pdf.cell()` or `pdf.multi_cell()` without sanitization. When adding new Greek letters to statistical output, add a replacement entry in `_sanitize_text()`.
+- **Report log limits**: `log_result()` caps `st.session_state["report_log"]` at 100 entries and drops oversized figure dicts (>2 MB) at log time via `_cap_figures()`. Chart images are also size-guarded at render time (2 MB dict, 5 MB PNG) in `embed_chart()`. Always check the `bool` return value of `log_result()` and show an error when full.
+- **PDF sig_badge safety**: `sig_badge()` silently skips `None` or non-numeric p-values. Renderers should use `result.get("p", 1.0)` with a safe default rather than direct key access for p-values.
+- **DataFrame serialization**: `_serialize_df()` preserves meaningful indices (non-RangeIndex, MultiIndex) by calling `reset_index()`. It handles column name collisions and MultiIndex level names correctly. `_safe_str()` handles `None`, `pd.NA`, `NaN`, `Inf`, and numpy types gracefully.
+- **Non-serializable objects in result dicts**: `_deep_native()` strips DataFrames, Series, and statsmodels/sklearn model objects from result dicts before storing in the report log. Never expect these to survive in `entry["result"]` — serialize DataFrames separately via `_serialize_df()` and pass them in the `tables` parameter.
 
 ## Library Usage
 
