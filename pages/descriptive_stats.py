@@ -7,7 +7,8 @@ from components.variable_selector import select_multiple_variables
 from stats.descriptive import compute_descriptives_table, compute_frequency_table
 from charts.histogram import histogram_with_normal
 from charts.boxplot import single_boxplot
-from core.state import get_df, get_var_type
+from core.state import get_df, get_var_type, log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def render():
@@ -58,6 +59,49 @@ def render():
                         with col2:
                             fig = single_boxplot(series, var)
                             st.plotly_chart(fig, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _tables = []
+        if metric_vars:
+            _desc_t = compute_descriptives_table(df, metric_vars)
+            _tables.append(_serialize_df(_desc_t.T, "Descriptive Statistics"))
+        if nominal_vars:
+            for _nv in nominal_vars:
+                _freq = compute_frequency_table(df[_nv].dropna())
+                _tables.append(_serialize_df(_freq, f"Frequency: {_nv}"))
+
+        _log_entry = build_log_entry(
+            entry_type="descriptive_stats",
+            title=f"Descriptive Statistics: {', '.join(selected[:5])}{'...' if len(selected) > 5 else ''}",
+            result={},
+            tables=_tables,
+            variables={"variables": ", ".join(selected)},
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include charts in PDF", value=True, key="desc_pdf_chart")
+        if _include_chart and metric_vars:
+            _figures = []
+            for _mv in metric_vars[:6]:
+                _s = pd.to_numeric(df[_mv], errors="coerce").dropna()
+                if len(_s) > 0:
+                    _hfig = histogram_with_normal(_s, _mv)
+                    _figures.append({"label": f"Histogram: {_mv}", "fig_dict": _hfig.to_dict()})
+            _log_entry["figures"] = _figures
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="desc_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="descriptive_stats.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

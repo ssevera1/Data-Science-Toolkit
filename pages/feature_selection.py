@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from utils.theme import page_header
+from core.state import log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def _guard():
@@ -208,6 +210,56 @@ def render():
                     keep = top_features + [target_col]
                     st.session_state["df"] = df[keep]
                     st.success(f"Reduced to {len(keep)} columns.")
+            # ── PDF Export ─────────────────────────────────────────
+            st.divider()
+            _top = summary.index[:5].tolist() if len(summary) >= 5 else summary.index.tolist()
+            _log_entry = build_log_entry(
+                entry_type="feature_selection",
+                title=f"Feature Selection: {target_col} ({task})",
+                result={
+                    "target": target_col,
+                    "task": task,
+                    "top_features": _top,
+                    "n_features": len(feature_cols),
+                },
+                tables=[_serialize_df(summary, "Feature Rankings")],
+                variables={"target": target_col, "task": task},
+                dataset_name=st.session_state.get("file_name", ""),
+            )
+            _include_chart = st.checkbox("Include charts in PDF", value=True, key="fs_pdf_chart")
+            if _include_chart:
+                _figures = []
+                if "Correlation" in results:
+                    _corr_df = pd.DataFrame({"Feature": results["Correlation"].index,
+                                             "Abs Correlation": results["Correlation"].values})
+                    _cfig = px.bar(_corr_df, x="Abs Correlation", y="Feature", orientation="h",
+                                   color="Abs Correlation", color_continuous_scale="Viridis")
+                    _cfig.update_layout(height=max(400, len(feature_cols) * 25),
+                                        yaxis=dict(autorange="reversed"))
+                    _figures.append({"label": "Correlation Filter", "fig_dict": _cfig.to_dict()})
+                if "Mutual Info" in results:
+                    _mi_df = pd.DataFrame({"Feature": results["Mutual Info"].index,
+                                           "MI Score": results["Mutual Info"].values})
+                    _mfig = px.bar(_mi_df, x="MI Score", y="Feature", orientation="h",
+                                   color="MI Score", color_continuous_scale="Plasma")
+                    _mfig.update_layout(height=max(400, len(feature_cols) * 25),
+                                        yaxis=dict(autorange="reversed"))
+                    _figures.append({"label": "Mutual Information", "fig_dict": _mfig.to_dict()})
+                _log_entry["figures"] = _figures
+            exp_col1, exp_col2 = st.columns(2)
+            with exp_col1:
+                if st.button("Add to Report", key="fs_add_report"):
+                    if log_result(_log_entry):
+                        st.success("Added to report log.")
+                    else:
+                        st.error("Report log is full (100 entries). Clear it first.")
+            with exp_col2:
+                st.download_button(
+                    "Export PDF",
+                    data=generate_single_report(_log_entry, include_charts=_include_chart),
+                    file_name="feature_selection.pdf",
+                    mime="application/pdf",
+                )
         else:
             st.info("Run the methods above to populate this summary.")
 

@@ -5,6 +5,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from time import time
 from utils.theme import page_header
+from core.state import log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def _guard():
@@ -315,6 +317,52 @@ def render():
                 st.session_state["model_X"] = X
                 st.session_state["model_y"] = y_enc
                 st.session_state["feature_cols"] = feature_cols
+
+            # ── PDF Export ─────────────────────────────────────────────
+            st.divider()
+            _has_primary = primary in res_df.columns and not res_df.dropna(subset=[primary]).empty
+            _best_name = res_df.dropna(subset=[primary]).iloc[0]["Model"] if _has_primary else (res_df.iloc[0]["Model"] if len(res_df) > 0 else "N/A")
+            _best_score = res_df.dropna(subset=[primary]).iloc[0][primary] if _has_primary else None
+            _log_entry = build_log_entry(
+                entry_type="model_arena",
+                title=f"Model Arena: {target} ({task})",
+                result={
+                    "task": task,
+                    "best_model": _best_name,
+                    "primary_metric": primary,
+                    "best_score": _best_score,
+                    "n_models": len(selected_models),
+                    "cv_folds": cv_folds,
+                },
+                tables=[_serialize_df(res_df, "Benchmark Results")],
+                variables={"target": target, "task": task, "cv_folds": str(cv_folds)},
+                dataset_name=st.session_state.get("file_name", ""),
+            )
+            _include_chart = st.checkbox("Include charts in PDF", value=True, key="arena_pdf_chart")
+            if _include_chart and _has_primary:
+                _figures = []
+                _valid = res_df.dropna(subset=[primary]).sort_values(primary, ascending=False)
+                if not _valid.empty:
+                    _bar = px.bar(_valid, x="Model", y=primary, color=primary,
+                                  color_continuous_scale="Viridis", text_auto=".4f",
+                                  title=f"Model Comparison -- {primary}")
+                    _bar.update_layout(height=450)
+                    _figures.append({"label": f"Model Comparison ({primary})", "fig_dict": _bar.to_dict()})
+                _log_entry["figures"] = _figures
+            exp_col1, exp_col2 = st.columns(2)
+            with exp_col1:
+                if st.button("Add to Report", key="arena_add_report"):
+                    if log_result(_log_entry):
+                        st.success("Added to report log.")
+                    else:
+                        st.error("Report log is full (100 entries). Clear it first.")
+            with exp_col2:
+                st.download_button(
+                    "Export PDF",
+                    data=generate_single_report(_log_entry, include_charts=_include_chart),
+                    file_name="model_arena.pdf",
+                    mime="application/pdf",
+                )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

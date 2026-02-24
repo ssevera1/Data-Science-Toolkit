@@ -12,7 +12,8 @@ from stats.ttest import independent_ttest
 from core.validators import validate_groups
 from charts.boxplot import grouped_boxplot
 from charts.qq_plot import qq_plot
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def render():
@@ -91,6 +92,36 @@ def render():
         with tab_chart:
             fig = grouped_boxplot(clean, dv, group)
             st.plotly_chart(fig, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _log_entry = build_log_entry(
+            entry_type="independent_ttest",
+            title=f"Independent t-Test: {dv} by {group}",
+            result=result,
+            tables=[_serialize_df(group_stats, "Group Statistics")],
+            variables={"dependent_variable": dv, "grouping_variable": group},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include chart in PDF", value=True, key="ind_pdf_chart")
+        if _include_chart:
+            _fig = grouped_boxplot(clean, dv, group)
+            _log_entry["figures"] = [{"label": "Grouped Box Plot", "fig_dict": _fig.to_dict()}]
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="ind_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="independent_ttest.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

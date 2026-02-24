@@ -89,6 +89,7 @@ from pages import manova
 from pages import multivariate_regression
 from pages import chi_squared_test
 from pages import binomial_test
+from pages import export_report
 
 # Navigation with collapsible sections
 def _page(func, title, url_path, icon, **kwargs):
@@ -136,6 +137,9 @@ pages = {
         _page(multivariate_regression.render, "Multivariate Regression", "multivariate-regression", "📐"),
         _page(chi_squared_test.render, "Chi-Squared Test", "chi-squared", "🔲"),
         _page(binomial_test.render, "Binomial Test", "binomial", "🎯"),
+    ],
+    "Reports": [
+        _page(export_report.render, "Report Builder", "report-builder", "📄"),
     ],
 }
 

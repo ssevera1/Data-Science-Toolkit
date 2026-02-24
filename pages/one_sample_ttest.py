@@ -12,7 +12,8 @@ from stats.ttest import one_sample_ttest
 from charts.boxplot import single_boxplot
 from charts.histogram import histogram_with_normal
 from charts.qq_plot import qq_plot
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report
 
 
 def render():
@@ -73,8 +74,43 @@ def render():
                              annotation_text=f"μ₀ = {test_value}")
                 st.plotly_chart(fig, width="stretch")
             with c2:
-                fig = qq_plot(series, var)
-                st.plotly_chart(fig, width="stretch")
+                fig_qq = qq_plot(series, var)
+                st.plotly_chart(fig_qq, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _log_entry = build_log_entry(
+            entry_type="one_sample_ttest",
+            title=f"One-Sample t-Test: {var} (test value = {test_value})",
+            result=result,
+            variables={"test_variable": var, "test_value": str(test_value)},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include charts in PDF", value=True, key="os_pdf_chart")
+        if _include_chart:
+            _fig_box = single_boxplot(series, var, title=f"{var} (test value = {test_value})")
+            _fig_box.add_hline(y=test_value, line_dash="dash", line_color="red",
+                               annotation_text=f"test value = {test_value}")
+            _fig_qq = qq_plot(series, var)
+            _log_entry["figures"] = [
+                {"label": "Box Plot", "fig_dict": _fig_box.to_dict()},
+                {"label": "Q-Q Plot", "fig_dict": _fig_qq.to_dict()},
+            ]
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="os_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="one_sample_ttest.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

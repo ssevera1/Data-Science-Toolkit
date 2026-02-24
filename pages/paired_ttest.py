@@ -12,7 +12,8 @@ from stats.ttest import paired_ttest
 from core.validators import validate_two_metrics
 from charts.boxplot import paired_boxplot
 from charts.qq_plot import qq_plot
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report
 
 
 def render():
@@ -82,8 +83,46 @@ def render():
                 st.plotly_chart(fig, width="stretch")
             with c2:
                 diff = clean[var1] - clean[var2]
-                fig = qq_plot(diff, "Differences")
-                st.plotly_chart(fig, width="stretch")
+                fig_qq = qq_plot(diff, "Differences")
+                st.plotly_chart(fig_qq, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _log_entry = build_log_entry(
+            entry_type="paired_ttest",
+            title=f"Paired t-Test: {var1} vs {var2}",
+            result=result,
+            variables={"variable_1": var1, "variable_2": var2},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include charts in PDF", value=True, key="paired_pdf_chart")
+        if _include_chart:
+            clean2 = df[[var1, var2]].dropna()
+            clean2[var1] = pd.to_numeric(clean2[var1], errors="coerce")
+            clean2[var2] = pd.to_numeric(clean2[var2], errors="coerce")
+            clean2 = clean2.dropna()
+            _fig_box = paired_boxplot(clean2, var1, var2)
+            _diff = clean2[var1] - clean2[var2]
+            _fig_qq = qq_plot(_diff, "Differences")
+            _log_entry["figures"] = [
+                {"label": "Paired Box Plot", "fig_dict": _fig_box.to_dict()},
+                {"label": "Q-Q Plot (Differences)", "fig_dict": _fig_qq.to_dict()},
+            ]
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="paired_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="paired_ttest.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

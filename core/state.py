@@ -84,3 +84,29 @@ def get_clean_df():
     """Get the DataFrame with rows that have all NaN removed."""
     df = get_df()
     return df.dropna(how="all").reset_index(drop=True)
+
+
+_MAX_LOG_ENTRIES = 100
+
+
+def log_result(entry: dict) -> bool:
+    """Append a result entry to the session report log.
+
+    Returns False if the log is full.
+    """
+    if "report_log" not in st.session_state:
+        st.session_state["report_log"] = []
+    if len(st.session_state["report_log"]) >= _MAX_LOG_ENTRIES:
+        return False
+    st.session_state["report_log"].append(entry)
+    return True
+
+
+def get_report_log() -> list:
+    """Return the current report log."""
+    return st.session_state.get("report_log", [])
+
+
+def clear_report_log() -> None:
+    """Clear all entries from the report log."""
+    st.session_state["report_log"] = []
