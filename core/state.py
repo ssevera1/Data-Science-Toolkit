@@ -92,15 +92,17 @@ _MAX_FIG_DICT_BYTES = 2_000_000  # 2 MB per figure dict at log time
 
 
 def _cap_figures(entry: dict) -> None:
-    """Drop oversized figure dicts before they accumulate in session state."""
+    """Drop oversized or malformed figure dicts before they accumulate in session state."""
     figs = entry.get("figures")
     if not figs:
         return
     kept = []
     for fig in figs:
+        if not isinstance(fig, dict):
+            continue
         try:
             size = len(json.dumps(fig.get("fig_dict", {}), default=str))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, AttributeError):
             size = 0
         if size <= _MAX_FIG_DICT_BYTES:
             kept.append(fig)

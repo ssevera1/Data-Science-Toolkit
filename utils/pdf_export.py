@@ -50,10 +50,16 @@ def _sanitize_text(text) -> str:
         "\u2264": "<=",    # <=
         "\u00b2": "^2",    # superscript 2
         "\u03b1": "alpha", # alpha
+        "\u03b2": "beta",  # beta
         "\u03b7": "eta",   # eta
-        "\u03c9": "omega", # omega
+        "\u03bb": "lambda",# lambda
         "\u03bc": "mu",    # mu
+        "\u03c1": "rho",   # rho
+        "\u03c3": "sigma", # sigma
+        "\u03c7": "chi",   # chi
+        "\u03c9": "omega", # omega
         "\u2080": "0",     # subscript 0
+        "\u00b3": "^3",    # superscript 3
     }
     for char, repl in replacements.items():
         text = text.replace(char, repl)
@@ -65,6 +71,11 @@ def _safe_str(val) -> str:
     """Convert a value to a display string, handling numpy/pandas types."""
     if val is None:
         return "N/A"
+    try:
+        if pd.isna(val):
+            return "N/A"
+    except (TypeError, ValueError):
+        pass
     if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
         return str(val)
     if isinstance(val, (np.integer,)):
@@ -95,15 +106,17 @@ def _serialize_df(df, label: str) -> dict:
     """Serialize a DataFrame to a dict for the log entry.
 
     Preserves the index as a column if it carries meaningful labels
-    (i.e., is not a default integer RangeIndex).
+    (i.e., is not a default integer RangeIndex).  Handles MultiIndex
+    and avoids column-name collisions.
     """
     out = df.head(_MAX_TABLE_ROWS)
-    has_meaningful_index = not isinstance(out.index, pd.RangeIndex)
+    has_meaningful_index = (
+        not isinstance(out.index, pd.RangeIndex)
+        and not (out.index.dtype.kind == "i" and out.index.is_monotonic_increasing
+                 and (len(out) == 0 or out.index[0] == 0))
+    )
     if has_meaningful_index:
-        idx_name = out.index.name or "Index"
         out = out.reset_index()
-        if out.columns[0] != idx_name:
-            out = out.rename(columns={out.columns[0]: idx_name})
     return {
         "label": label,
         "data": out.to_dict(orient="records"),
@@ -187,7 +200,9 @@ class _DSReport(FPDF):
         self.cell(0, 6, value, new_x="LMARGIN", new_y="NEXT")
         self.ln(1)
 
-    def sig_badge(self, p_value: float, alpha: float = 0.05):
+    def sig_badge(self, p_value, alpha: float = 0.05):
+        if p_value is None or not isinstance(p_value, (int, float)):
+            return  # skip badge for missing/invalid p-values
         if p_value < alpha:
             color = _SUCCESS
             label = f"Significant (p = {p_value:.4f})"
@@ -590,10 +605,11 @@ def _render_nonparametric(pdf: _DSReport, entry: dict, include_charts: bool):
     for key in ["n", "n1", "n2", "n_subjects", "n_conditions"]:
         if key in result:
             pdf.kv_line(key.replace("_", " ").title(), _safe_str(result[key]))
-    for key in ["median1", "median2", "median_diff"]:
+    _median_labels = {"median1": "Median (Group 1)", "median2": "Median (Group 2)",
+                       "median_diff": "Median Difference"}
+    for key, mlabel in _median_labels.items():
         if key in result:
-            pdf.kv_line(key.replace("_", " ").replace("1", " 1").replace("2", " 2").title(),
-                        _safe_str(result[key]))
+            pdf.kv_line(mlabel, _safe_str(result[key]))
 
     # Effect sizes
     for key, label in [("rank_biserial", "Rank-biserial correlation"),
@@ -958,7 +974,7 @@ def generate_single_report(entry: dict, include_charts: bool = True) -> bytes:
              new_x="LMARGIN", new_y="NEXT")
     pdf.ln(4)
 
-    renderer = _RENDERERS.get(entry["entry_type"], _render_fallback)
+    renderer = _RENDERERS.get(entry.get("entry_type", ""), _render_fallback)
     renderer(pdf, entry, include_charts)
 
     return pdf.output()
