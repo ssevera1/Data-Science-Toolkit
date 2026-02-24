@@ -10,7 +10,8 @@ from components.results_display import (
 from stats.manova import manova
 from core.validators import validate_groups
 from charts.boxplot import grouped_boxplot
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def render():
@@ -138,6 +139,45 @@ def render():
             for dv in dv_cols:
                 fig = grouped_boxplot(clean, dv, group)
                 st.plotly_chart(fig, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _tables = [_serialize_df(result["manova_table"], "Multivariate Tests"),
+                   _serialize_df(result["group_desc"], "Group Descriptives")]
+        for uv in result.get("univariate_anovas", []):
+            _tables.append(_serialize_df(uv["anova_table"], f"Univariate ANOVA: {uv['dv']}"))
+        if result.get("posthoc") is not None:
+            _tables.append(_serialize_df(result["posthoc"], "Post-Hoc (Tukey HSD)"))
+        _log_entry = build_log_entry(
+            entry_type="manova",
+            title=f"MANOVA: {', '.join(dv_cols[:3])}{'...' if len(dv_cols) > 3 else ''} by {group}",
+            result=result,
+            tables=_tables,
+            variables={"dvs": ", ".join(dv_cols), "group": group},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include charts in PDF", value=True, key="man_pdf_chart")
+        if _include_chart:
+            _figures = []
+            for _dv in dv_cols[:4]:
+                _fig = grouped_boxplot(clean, _dv, group)
+                _figures.append({"label": f"Boxplot: {_dv}", "fig_dict": _fig.to_dict()})
+            _log_entry["figures"] = _figures
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="man_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="manova.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

@@ -8,7 +8,8 @@ from components.results_display import render_assumption_check
 from stats.anova import repeated_measures_anova
 from charts.boxplot import grouped_boxplot
 from charts.barplot import group_means_bar
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def render():
@@ -77,6 +78,45 @@ def render():
             with c2:
                 fig = group_means_bar(clean, dv, within)
                 st.plotly_chart(fig, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _tables = [_serialize_df(result["anova_table"], "ANOVA Table")]
+        if "group_desc" in result:
+            _tables.append(_serialize_df(result["group_desc"], "Group Descriptives"))
+        if result.get("posthoc") is not None:
+            _tables.append(_serialize_df(result["posthoc"], "Post-Hoc Comparisons"))
+        _log_entry = build_log_entry(
+            entry_type="repeated_anova",
+            title=f"Repeated Measures ANOVA: {dv} ~ {within}",
+            result=result,
+            tables=_tables,
+            variables={"dv": dv, "within": within, "subject": subject},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include charts in PDF", value=True, key="rm_pdf_chart")
+        if _include_chart:
+            _figures = []
+            _bfig = grouped_boxplot(clean, dv, within)
+            _figures.append({"label": "Grouped Boxplot", "fig_dict": _bfig.to_dict()})
+            _mfig = group_means_bar(clean, dv, within)
+            _figures.append({"label": "Group Means", "fig_dict": _mfig.to_dict()})
+            _log_entry["figures"] = _figures
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="rm_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="repeated_anova.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

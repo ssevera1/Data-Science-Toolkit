@@ -9,7 +9,8 @@ from stats.nonparametric import wilcoxon_signed_rank
 from core.validators import validate_two_metrics
 from charts.boxplot import paired_boxplot
 from charts.histogram import histogram_with_normal
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report
 
 
 def render():
@@ -77,6 +78,40 @@ def render():
                 diff = clean[var1] - clean[var2]
                 fig = histogram_with_normal(diff, "Differences")
                 st.plotly_chart(fig, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _log_entry = build_log_entry(
+            entry_type="wilcoxon",
+            title=f"Wilcoxon Signed-Rank: {var1} vs {var2}",
+            result=result,
+            variables={"variable_1": var1, "variable_2": var2},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include charts in PDF", value=True, key="wil_pdf_chart")
+        if _include_chart:
+            _figures = []
+            _bfig = paired_boxplot(clean, var1, var2)
+            _figures.append({"label": "Paired Boxplot", "fig_dict": _bfig.to_dict()})
+            _diff = clean[var1] - clean[var2]
+            _hfig = histogram_with_normal(_diff, "Differences")
+            _figures.append({"label": "Histogram of Differences", "fig_dict": _hfig.to_dict()})
+            _log_entry["figures"] = _figures
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="wil_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="wilcoxon.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

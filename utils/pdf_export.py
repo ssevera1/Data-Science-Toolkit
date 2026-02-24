@@ -548,6 +548,253 @@ def _render_single_assumption(pdf: _DSReport, name: str, check: dict):
     pdf.ln(1)
 
 
+def _render_nonparametric(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render Mann-Whitney, Wilcoxon, Kruskal-Wallis, or Friedman results."""
+    result = entry["result"]
+    alpha = entry.get("alpha", 0.05)
+    variables = entry.get("variables", {})
+
+    pdf.section_heading(entry["title"])
+
+    for k, v in variables.items():
+        pdf.kv_line(k.replace("_", " ").title(), str(v))
+    pdf.ln(2)
+
+    pdf.sig_badge(result.get("p", 1.0), alpha)
+
+    # Test statistic (varies by test type)
+    for stat_key, stat_label in [("U", "U statistic"), ("W", "W statistic"),
+                                  ("H", "H statistic"), ("chi2", "Chi-squared")]:
+        if stat_key in result:
+            pdf.kv_line(stat_label, _safe_str(result[stat_key]))
+    pdf.kv_line("p-value", _safe_str(result.get("p")))
+    if "df" in result:
+        pdf.kv_line("Degrees of freedom", _safe_str(result["df"]))
+
+    # Sample info
+    for key in ["n", "n1", "n2", "n_subjects", "n_conditions"]:
+        if key in result:
+            pdf.kv_line(key.replace("_", " ").title(), _safe_str(result[key]))
+    for key in ["median1", "median2", "median_diff"]:
+        if key in result:
+            pdf.kv_line(key.replace("_", " ").replace("1", " 1").replace("2", " 2").title(),
+                        _safe_str(result[key]))
+
+    # Effect sizes
+    for key, label in [("rank_biserial", "Rank-biserial correlation"),
+                        ("r_effect", "Effect size (r)"),
+                        ("epsilon_squared", "Epsilon-squared"),
+                        ("kendalls_w", "Kendall's W")]:
+        if key in result:
+            pdf.kv_line(label, _safe_str(result[key]))
+
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    _render_assumptions(pdf, result.get("assumptions", {}))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_anova_general(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render two-way, repeated measures, or mixed ANOVA."""
+    result = entry["result"]
+    alpha = entry.get("alpha", 0.05)
+    variables = entry.get("variables", {})
+
+    pdf.section_heading(entry["title"])
+
+    for k, v in variables.items():
+        pdf.kv_line(k.replace("_", " ").title(), str(v))
+    pdf.ln(2)
+
+    # Overall p if available
+    if "p" in result:
+        pdf.sig_badge(result["p"], alpha)
+
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    _render_assumptions(pdf, result.get("assumptions", {}))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_manova(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render MANOVA results."""
+    result = entry["result"]
+    alpha = entry.get("alpha", 0.05)
+    variables = entry.get("variables", {})
+
+    pdf.section_heading(entry["title"])
+
+    for k, v in variables.items():
+        pdf.kv_line(k.replace("_", " ").title(), str(v))
+    pdf.ln(2)
+
+    if "overall_p" in result:
+        pdf.sig_badge(result["overall_p"], alpha)
+
+    pdf.kv_line("N (complete cases)", _safe_str(result.get("n")))
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    _render_assumptions(pdf, result.get("assumptions", {}))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_regression(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render linear or logistic regression results."""
+    result = entry["result"]
+    alpha = entry.get("alpha", 0.05)
+    variables = entry.get("variables", {})
+
+    pdf.section_heading(entry["title"])
+
+    for k, v in variables.items():
+        pdf.kv_line(k.replace("_", " ").title(), str(v))
+    pdf.ln(2)
+
+    # Model-level significance
+    if "f_p" in result:
+        pdf.sig_badge(result["f_p"], alpha)
+        pdf.kv_line("F-statistic", _safe_str(result.get("f_stat")))
+        pdf.kv_line("p-value (F)", _safe_str(result["f_p"]))
+    elif "chi2_p" in result:
+        pdf.sig_badge(result["chi2_p"], alpha)
+        pdf.kv_line("Chi-squared (LR)", _safe_str(result.get("chi2")))
+        pdf.kv_line("p-value (LR)", _safe_str(result["chi2_p"]))
+
+    # Fit statistics
+    for key, label in [("r_squared", "R-squared"), ("adj_r_squared", "Adj. R-squared"),
+                        ("pseudo_r_squared", "Pseudo R-squared (McFadden)"),
+                        ("accuracy", "Accuracy"), ("n", "N"),
+                        ("aic", "AIC"), ("bic", "BIC")]:
+        if key in result:
+            pdf.kv_line(label, _safe_str(result[key]))
+
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    _render_assumptions(pdf, result.get("assumptions", {}))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_chi_squared(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render chi-squared test results."""
+    result = entry["result"]
+    alpha = entry.get("alpha", 0.05)
+    variables = entry.get("variables", {})
+
+    pdf.section_heading(entry["title"])
+
+    for k, v in variables.items():
+        pdf.kv_line(k.replace("_", " ").title(), str(v))
+    pdf.ln(2)
+
+    pdf.sig_badge(result.get("p", 1.0), alpha)
+
+    pdf.kv_line("Chi-squared", _safe_str(result.get("chi2")))
+    pdf.kv_line("p-value", _safe_str(result.get("p")))
+    pdf.kv_line("Degrees of freedom", _safe_str(result.get("df")))
+    pdf.kv_line("N", _safe_str(result.get("n")))
+    pdf.kv_line("Cramer's V", _safe_str(result.get("cramers_v")))
+
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    _render_assumptions(pdf, result.get("assumptions", {}))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_binomial(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render binomial test results."""
+    result = entry["result"]
+    alpha = entry.get("alpha", 0.05)
+    variables = entry.get("variables", {})
+
+    pdf.section_heading(entry["title"])
+
+    for k, v in variables.items():
+        pdf.kv_line(k.replace("_", " ").title(), str(v))
+    pdf.ln(2)
+
+    pdf.sig_badge(result.get("p", 1.0), alpha)
+
+    pdf.kv_line("N", _safe_str(result.get("n")))
+    pdf.kv_line("Observed proportion", _safe_str(result.get("observed_prop")))
+    pdf.kv_line("Test proportion", _safe_str(result.get("test_prop")))
+    pdf.kv_line("p-value", _safe_str(result.get("p")))
+    if "n_success" in result:
+        pdf.kv_line(f"'{result.get('success_label', 'Success')}'",
+                    _safe_str(result.get("n_success")))
+        pdf.kv_line(f"'{result.get('failure_label', 'Failure')}'",
+                    _safe_str(result.get("n_failure")))
+    if "ci_lower" in result:
+        pdf.kv_line("95% CI for proportion",
+                    f"[{_safe_str(result.get('ci_lower'))}, {_safe_str(result.get('ci_upper'))}]")
+
+    pdf.ln(3)
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_multivariate_regression(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render multivariate regression results."""
+    result = entry["result"]
+    alpha = entry.get("alpha", 0.05)
+    variables = entry.get("variables", {})
+
+    pdf.section_heading(entry["title"])
+
+    for k, v in variables.items():
+        pdf.kv_line(k.replace("_", " ").title(), str(v))
+    pdf.ln(2)
+
+    pdf.kv_line("N (complete cases)", _safe_str(result.get("n")))
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    _render_assumptions(pdf, result.get("assumptions", {}))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
 def _render_fallback(pdf: _DSReport, entry: dict, include_charts: bool):
     """Fallback renderer for unknown entry types."""
     pdf.section_heading(entry.get("title", "Analysis Result"))
@@ -570,7 +817,21 @@ _RENDERERS = {
     "paired_ttest": _render_ttest_family,
     "one_sample_ttest": _render_ttest_family,
     "oneway_anova": _render_anova,
+    "twoway_anova": _render_anova_general,
+    "repeated_anova": _render_anova_general,
+    "mixed_anova": _render_anova_general,
+    "manova": _render_manova,
     "pearson_correlation": _render_correlation,
+    "spearman_correlation": _render_correlation,
+    "mann_whitney": _render_nonparametric,
+    "wilcoxon": _render_nonparametric,
+    "kruskal_wallis": _render_nonparametric,
+    "friedman": _render_nonparametric,
+    "linear_regression": _render_regression,
+    "logistic_regression": _render_regression,
+    "multivariate_regression": _render_multivariate_regression,
+    "chi_squared": _render_chi_squared,
+    "binomial": _render_binomial,
     "descriptive_stats": _render_descriptive,
     "model_arena": _render_model_arena,
     "feature_selection": _render_feature_selection,

@@ -10,7 +10,8 @@ from components.results_display import (
 from stats.multivariate_regression import multivariate_regression
 from charts.regression_plot import multi_regression_actual_vs_predicted
 from charts.qq_plot import qq_plot
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def render():
@@ -158,6 +159,48 @@ def render():
                         f"Residuals ({m['dv']})",
                     )
                     st.plotly_chart(fig, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _tables = []
+        if len(result.get("multivariate_tests", [])) > 0:
+            _tables.append(_serialize_df(result["multivariate_tests"], "Multivariate Tests"))
+        for _m in result.get("individual_models", []):
+            _tables.append(_serialize_df(_m["coef_table"], f"Coefficients: {_m['dv']}"))
+        _log_entry = build_log_entry(
+            entry_type="multivariate_regression",
+            title=f"Multivariate Regression: {', '.join(dv_cols[:3])}{'...' if len(dv_cols) > 3 else ''}",
+            result=result,
+            tables=_tables,
+            variables={"dvs": ", ".join(dv_cols), "predictors": ", ".join(predictors)},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include charts in PDF", value=True, key="mvr_pdf_chart")
+        if _include_chart:
+            _figures = []
+            for _m in result.get("individual_models", [])[:4]:
+                _avp = multi_regression_actual_vs_predicted(
+                    pd.Series(_m["residuals"].values + _m["fitted"].values, name=_m["dv"]),
+                    pd.Series(_m["fitted"], name="Predicted"),
+                    title=f"Actual vs Predicted: {_m['dv']}",
+                )
+                _figures.append({"label": f"Actual vs Predicted: {_m['dv']}", "fig_dict": _avp.to_dict()})
+            _log_entry["figures"] = _figures
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="mvr_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="multivariate_regression.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

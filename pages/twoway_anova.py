@@ -8,7 +8,8 @@ from components.results_display import render_assumption_check
 from stats.anova import twoway_anova
 from charts.barplot import two_way_bar
 from charts.boxplot import grouped_boxplot
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def render():
@@ -74,6 +75,39 @@ def render():
         with tab_chart:
             fig = two_way_bar(clean, dv, factor1, factor2)
             st.plotly_chart(fig, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _tables = [_serialize_df(result["anova_table"], "ANOVA Table")]
+        if "group_desc" in result:
+            _tables.append(_serialize_df(result["group_desc"], "Group Descriptives"))
+        _log_entry = build_log_entry(
+            entry_type="twoway_anova",
+            title=f"Two-Way ANOVA: {dv} ~ {factor1} x {factor2}",
+            result=result,
+            tables=_tables,
+            variables={"dv": dv, "factor_1": factor1, "factor_2": factor2},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include chart in PDF", value=True, key="tw_pdf_chart")
+        if _include_chart:
+            _fig = two_way_bar(clean, dv, factor1, factor2)
+            _log_entry["figures"] = [{"label": "Two-Way Bar Chart", "fig_dict": _fig.to_dict()}]
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="tw_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="twoway_anova.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

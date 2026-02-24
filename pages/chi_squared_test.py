@@ -7,7 +7,8 @@ from components.data_table import render_data_preview
 from components.variable_selector import select_nominal_variable
 from components.results_display import render_significance_result, render_assumption_check, render_effect_size
 from stats.chi_squared import chi_squared_test
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 from charts.theme import apply_theme, get_chart_colors
 
 
@@ -75,6 +76,47 @@ def render():
             )
             fig.update_layout(xaxis_title=var2, yaxis_title="Count")
             st.plotly_chart(apply_theme(fig), width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _tables = [
+            _serialize_df(result["contingency"], "Observed Frequencies"),
+            _serialize_df(result["expected"].round(2), "Expected Frequencies"),
+        ]
+        _log_entry = build_log_entry(
+            entry_type="chi_squared",
+            title=f"Chi-Squared Test: {var1} x {var2}",
+            result=result,
+            tables=_tables,
+            variables={"variable_1": var1, "variable_2": var2},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include chart in PDF", value=True, key="chi_pdf_chart")
+        if _include_chart:
+            _contingency = result["contingency"]
+            _cfig = px.bar(
+                _contingency.T,
+                barmode="group",
+                color_discrete_sequence=get_chart_colors(),
+                title=f"Frequencies: {var1} x {var2}",
+            )
+            _cfig.update_layout(xaxis_title=var2, yaxis_title="Count")
+            _log_entry["figures"] = [{"label": "Frequency Chart", "fig_dict": apply_theme(_cfig).to_dict()}]
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="chi_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="chi_squared.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

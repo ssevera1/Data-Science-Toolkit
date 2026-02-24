@@ -7,7 +7,8 @@ from components.data_table import render_data_preview
 from components.variable_selector import select_any_variable, select_multiple_variables
 from components.results_display import render_significance_result, render_effect_size
 from stats.regression import logistic_regression
-from core.state import get_df
+from core.state import get_df, log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 import plotly.graph_objects as go
 from charts.theme import apply_theme, get_chart_colors
 
@@ -102,6 +103,59 @@ def render():
                 correct = (predicted_class == y).sum()
                 total = len(y)
                 st.markdown(f"**Correctly classified:** {correct}/{total} ({correct/total:.1%})")
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _tables = [_serialize_df(result["coef_table"], "Coefficients")]
+        _log_entry = build_log_entry(
+            entry_type="logistic_regression",
+            title=f"Logistic Regression: {dv} ~ {' + '.join(predictors[:4])}{'...' if len(predictors) > 4 else ''}",
+            result=result,
+            tables=_tables,
+            variables={"dv": dv, "predictors": ", ".join(predictors)},
+            alpha=alpha,
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include chart in PDF", value=True, key="log_pdf_chart")
+        if _include_chart and len(predictors) == 1:
+            _clean = df[[dv, predictors[0]]].dropna()
+            for _c in _clean.columns:
+                _clean[_c] = pd.to_numeric(_clean[_c], errors="coerce")
+            _clean = _clean.dropna()
+            _fig = go.Figure()
+            _fig.add_trace(go.Scatter(
+                x=_clean[predictors[0]], y=_clean[dv],
+                mode="markers", name="Data",
+                marker=dict(color=get_chart_colors()[0], size=7, opacity=0.6),
+            ))
+            _probs = result["predicted_probs"]
+            _sort_idx = _clean[predictors[0]].argsort()
+            _fig.add_trace(go.Scatter(
+                x=_clean[predictors[0]].iloc[_sort_idx],
+                y=_probs[_sort_idx],
+                mode="lines", name="Predicted probability",
+                line=dict(color=get_chart_colors()[1], width=2),
+            ))
+            _fig.update_layout(
+                title=f"Logistic Regression: {dv} ~ {predictors[0]}",
+                xaxis_title=predictors[0],
+                yaxis_title=f"P({dv} = 1)",
+            )
+            _log_entry["figures"] = [{"label": "Logistic Curve", "fig_dict": apply_theme(_fig).to_dict()}]
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="log_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="logistic_regression.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()
