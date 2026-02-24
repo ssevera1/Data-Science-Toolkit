@@ -92,11 +92,22 @@ def _native(val):
 
 
 def _serialize_df(df, label: str) -> dict:
-    """Serialize a DataFrame to a dict for the log entry."""
+    """Serialize a DataFrame to a dict for the log entry.
+
+    Preserves the index as a column if it carries meaningful labels
+    (i.e., is not a default integer RangeIndex).
+    """
+    out = df.head(_MAX_TABLE_ROWS)
+    has_meaningful_index = not isinstance(out.index, pd.RangeIndex)
+    if has_meaningful_index:
+        idx_name = out.index.name or "Index"
+        out = out.reset_index()
+        if out.columns[0] != idx_name:
+            out = out.rename(columns={out.columns[0]: idx_name})
     return {
         "label": label,
-        "data": df.head(_MAX_TABLE_ROWS).to_dict(orient="records"),
-        "columns": list(df.columns),
+        "data": out.to_dict(orient="records"),
+        "columns": list(out.columns),
     }
 
 
@@ -430,7 +441,8 @@ def _render_correlation(pdf: _DSReport, entry: dict, include_charts: bool):
     pdf.sig_badge(result.get("p", 1.0), alpha)
 
     pdf.kv_line("r", _safe_str(result.get("r")))
-    pdf.kv_line("R-squared", _safe_str(result.get("r_squared")))
+    if "r_squared" in result:
+        pdf.kv_line("R-squared", _safe_str(result["r_squared"]))
     pdf.kv_line("p-value", _safe_str(result.get("p")))
     pdf.kv_line("N", _safe_str(result.get("n")))
     if "ci_lower" in result:
@@ -515,10 +527,13 @@ def _render_assumptions(pdf: _DSReport, assumptions: dict):
     for key, val in assumptions.items():
         if isinstance(val, dict) and "statistic" in val:
             _render_single_assumption(pdf, key, val)
+        elif isinstance(val, dict) and "passed" in val:
+            # Assumption without a test statistic (e.g., chi-squared expected frequencies)
+            _render_single_assumption(pdf, key, val)
         elif isinstance(val, dict):
-            # Nested (e.g., normality per group)
+            # Nested (e.g., normality per group, homogeneity per DV)
             for sub_key, sub_val in val.items():
-                if isinstance(sub_val, dict) and "statistic" in sub_val:
+                if isinstance(sub_val, dict) and ("statistic" in sub_val or "passed" in sub_val):
                     _render_single_assumption(pdf, f"{key}: {sub_key}", sub_val)
 
     pdf.ln(2)
@@ -613,8 +628,17 @@ def _render_anova_general(pdf: _DSReport, entry: dict, include_charts: bool):
         pdf.kv_line(k.replace("_", " ").title(), str(v))
     pdf.ln(2)
 
-    # Overall p if available
-    if "p" in result:
+    # Extract smallest p-value from the ANOVA table for the significance badge
+    _anova_tables = [t for t in entry.get("tables", []) if "ANOVA" in t.get("label", "")]
+    if _anova_tables:
+        _aov_df = _deserialize_df(_anova_tables[0])
+        for _pcol in ("p-unc", "p", "p-value", "Pr(>F)"):
+            if _pcol in _aov_df.columns:
+                _pvals = pd.to_numeric(_aov_df[_pcol], errors="coerce").dropna()
+                if len(_pvals) > 0:
+                    pdf.sig_badge(float(_pvals.min()), alpha)
+                break
+    elif "p" in result:
         pdf.sig_badge(result["p"], alpha)
 
     pdf.ln(3)
@@ -889,13 +913,24 @@ def build_log_entry(
 
 
 def _deep_native(obj):
-    """Recursively convert numpy/pandas types to native Python."""
+    """Recursively convert numpy/pandas types to native Python.
+
+    Strips DataFrames, Series, and non-serializable objects (e.g., statsmodels
+    model instances) to keep the log entry lightweight.
+    """
     if isinstance(obj, dict):
         return {k: _deep_native(v) for k, v in obj.items()
-                if not isinstance(v, pd.DataFrame)}
+                if not isinstance(v, (pd.DataFrame, pd.Series))
+                and not _is_model_object(v)}
     if isinstance(obj, (list, tuple)):
         return [_deep_native(v) for v in obj]
     return _native(obj)
+
+
+def _is_model_object(obj) -> bool:
+    """Check if obj is a statsmodels or sklearn model (non-serializable)."""
+    type_name = type(obj).__module__
+    return type_name.startswith(("statsmodels.", "sklearn."))
 
 
 def generate_single_report(entry: dict, include_charts: bool = True) -> bytes:
