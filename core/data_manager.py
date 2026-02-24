@@ -106,11 +106,27 @@ def add_rows(n=10):
     set_df(pd.concat([df, extra], ignore_index=True))
 
 
+_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+
+
 def _sanitize_formula_cell(value):
     """Prefix cells starting with formula characters to prevent CSV injection."""
-    if isinstance(value, str) and value and value[0] in ("=", "+", "-", "@"):
+    if isinstance(value, str) and value and value[0] in _FORMULA_TRIGGERS:
         return "'" + value
     return value
+
+
+def sanitize_csv(dataframe):
+    """Prefix formula-trigger characters to prevent CSV injection in Excel.
+
+    This is the single shared implementation — all CSV exports must use it.
+    """
+    out = dataframe.copy()
+    for col in out.select_dtypes(include=["object", "category"]).columns:
+        out[col] = out[col].apply(
+            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _FORMULA_TRIGGERS else v
+        )
+    return out
 
 
 def export_csv():

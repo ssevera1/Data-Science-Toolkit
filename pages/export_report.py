@@ -70,29 +70,29 @@ def render():
 
     st.markdown(f"**{len(selected)}** of {len(report_log)} entries selected for export.")
 
-    # Build dataset info
-    dataset_name = selected[0].get("dataset_name", "Unknown") if selected else "Unknown"
-    df = st.session_state.get("df")
-    dataset_info = {
-        "name": dataset_name,
-        "rows": len(df) if df is not None else 0,
-        "cols": len(df.columns) if df is not None else 0,
-    }
+    if st.button("Generate PDF Report", type="primary"):
+        # Build dataset info
+        dataset_name = selected[0].get("dataset_name", "Unknown") if selected else "Unknown"
+        df = st.session_state.get("df")
+        dataset_info = {
+            "name": dataset_name,
+            "rows": len(df) if df is not None else 0,
+            "cols": len(df.columns) if df is not None else 0,
+        }
 
-    with st.spinner("Generating PDF report..."):
-        pdf_bytes = generate_full_report(
-            report_log=selected,
-            dataset_info=dataset_info,
-            include_charts=include_charts,
+        with st.spinner("Generating PDF report..."):
+            pdf_bytes = generate_full_report(
+                report_log=selected,
+                dataset_info=dataset_info,
+                include_charts=include_charts,
+            )
+
+        st.download_button(
+            "Download Full Report PDF",
+            data=pdf_bytes,
+            file_name="ds_power_tools_report.pdf",
+            mime="application/pdf",
         )
-
-    st.download_button(
-        "Download Full Report PDF",
-        data=pdf_bytes,
-        file_name="ds_power_tools_report.pdf",
-        mime="application/pdf",
-        type="primary",
-    )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

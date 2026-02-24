@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from utils.theme import page_header, get_colors
+from core.data_manager import sanitize_csv as _sanitize_csv
 
 
 def _guard():
@@ -61,17 +62,6 @@ def _apply_tomek_links(result_df, target_col, feature_cols, n_original):
         result_df = result_df[keep].reset_index(drop=True)
 
     return result_df, result_df[target_col]
-
-
-def _sanitize_csv(dataframe):
-    """Prefix formula-trigger characters to prevent CSV injection in Excel."""
-    _dangerous = ("=", "+", "-", "@", "\t", "\r")
-    out = dataframe.copy()
-    for col in out.select_dtypes(include=["object", "category"]).columns:
-        out[col] = out[col].apply(
-            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _dangerous else v
-        )
-    return out
 
 
 def render():

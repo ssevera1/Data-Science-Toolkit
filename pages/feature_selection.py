@@ -5,23 +5,13 @@ import plotly.express as px
 from utils.theme import page_header
 from core.state import log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
+from core.data_manager import sanitize_csv as _sanitize_csv
 
 
 def _guard():
     if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
         st.warning("Upload a dataset on the **Home** page first, or enter data via **Statistics Tools > Data Input**.")
         st.stop()
-
-
-def _sanitize_csv(dataframe):
-    """Prefix formula-trigger characters to prevent CSV injection in Excel."""
-    _dangerous = ("=", "+", "-", "@", "\t", "\r")
-    out = dataframe.copy()
-    for col in out.select_dtypes(include=["object", "category"]).columns:
-        out[col] = out[col].apply(
-            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _dangerous else v
-        )
-    return out
 
 
 def render():

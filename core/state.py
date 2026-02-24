@@ -1,5 +1,6 @@
 """Session state initialization and management."""
 
+import json
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -87,17 +88,36 @@ def get_clean_df():
 
 
 _MAX_LOG_ENTRIES = 100
+_MAX_FIG_DICT_BYTES = 2_000_000  # 2 MB per figure dict at log time
+
+
+def _cap_figures(entry: dict) -> None:
+    """Drop oversized figure dicts before they accumulate in session state."""
+    figs = entry.get("figures")
+    if not figs:
+        return
+    kept = []
+    for fig in figs:
+        try:
+            size = len(json.dumps(fig.get("fig_dict", {}), default=str))
+        except (TypeError, ValueError):
+            size = 0
+        if size <= _MAX_FIG_DICT_BYTES:
+            kept.append(fig)
+    entry["figures"] = kept
 
 
 def log_result(entry: dict) -> bool:
     """Append a result entry to the session report log.
 
     Returns False if the log is full.
+    Drops oversized figure dicts before storing.
     """
     if "report_log" not in st.session_state:
         st.session_state["report_log"] = []
     if len(st.session_state["report_log"]) >= _MAX_LOG_ENTRIES:
         return False
+    _cap_figures(entry)
     st.session_state["report_log"].append(entry)
     return True
 

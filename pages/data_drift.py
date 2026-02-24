@@ -6,22 +6,12 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy import stats
 from utils.theme import page_header, get_colors
+from core.data_manager import sanitize_csv as _sanitize_csv
 
 
 MAX_SIZE_MB = 50
 MAX_ROWS = 500_000
 MAX_COLS = 500
-
-
-def _sanitize_csv(dataframe):
-    """Prefix formula-trigger characters to prevent CSV injection in Excel."""
-    _dangerous = ("=", "+", "-", "@", "\t", "\r")
-    out = dataframe.copy()
-    for col in out.select_dtypes(include=["object", "category"]).columns:
-        out[col] = out[col].apply(
-            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _dangerous else v
-        )
-    return out
 
 
 def _load_upload(file, label):
