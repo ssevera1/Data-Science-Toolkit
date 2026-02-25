@@ -58,6 +58,45 @@ def render():
         })
     out_df_default = pd.DataFrame(outlier_summary_default) if outlier_summary_default else pd.DataFrame()
 
+    # Correlation data (Pearson, pre-computed for tab + PDF)
+    num_df = df.select_dtypes(include="number")
+    corr_pairs_df = pd.DataFrame()
+    corr_heatmap_fig = None
+    if num_df.shape[1] >= 2:
+        corr_matrix = num_df.corr(method="pearson")
+        corr_heatmap_fig = px.imshow(
+            corr_matrix, text_auto=".2f", color_continuous_scale="RdBu_r",
+            zmin=-1, zmax=1, aspect="auto",
+        )
+        corr_heatmap_fig.update_layout(height=600)
+        pairs = []
+        for i in range(len(corr_matrix.columns)):
+            for j in range(i + 1, len(corr_matrix.columns)):
+                val = corr_matrix.iloc[i, j]
+                if abs(val) > 0.8:
+                    pairs.append({
+                        "Feature A": corr_matrix.columns[i],
+                        "Feature B": corr_matrix.columns[j],
+                        "Correlation": round(val, 4),
+                    })
+        if pairs:
+            corr_pairs_df = pd.DataFrame(pairs)
+
+    # Missing values summary (pre-computed for tab + PDF)
+    miss = df.isnull().sum()
+    miss = miss[miss > 0].sort_values(ascending=False)
+    miss_df = pd.DataFrame()
+    miss_chart_fig = None
+    if len(miss) > 0:
+        miss_df = pd.DataFrame({
+            "Column": miss.index,
+            "Missing": miss.values,
+            "% Missing": (miss.values / len(df) * 100).round(2),
+        })
+        miss_chart_fig = px.bar(miss_df, x="Column", y="% Missing", color="% Missing",
+                                color_continuous_scale="Reds", text_auto=".1f")
+        miss_chart_fig.update_layout(height=400)
+
     tab_overview, tab_dist, tab_corr, tab_missing, tab_outliers = st.tabs(
         ["Overview", "Distributions", "Correlations", "Missing Values", "Outliers"]
     )
@@ -114,34 +153,35 @@ def render():
     # ── Correlations ───────────────────────────────────────────────────────────
     with tab_corr:
         st.subheader("Correlation Matrix")
-        num_df = df.select_dtypes(include="number")
         if num_df.shape[1] >= 2:
             method = st.selectbox("Method", ["pearson", "spearman", "kendall"])
-            corr = num_df.corr(method=method)
-
-            fig = px.imshow(
-                corr,
-                text_auto=".2f",
-                color_continuous_scale="RdBu_r",
-                zmin=-1, zmax=1,
-                aspect="auto",
-            )
-            fig.update_layout(height=600)
+            # Use pre-computed Pearson or recompute for other methods
+            if method == "pearson":
+                corr = corr_matrix
+                fig = corr_heatmap_fig
+            else:
+                corr = num_df.corr(method=method)
+                fig = px.imshow(
+                    corr, text_auto=".2f", color_continuous_scale="RdBu_r",
+                    zmin=-1, zmax=1, aspect="auto",
+                )
+                fig.update_layout(height=600)
             st.plotly_chart(fig, width="stretch")
 
             st.markdown("#### Highly Correlated Pairs (|r| > 0.8)")
-            pairs = []
+            # Recompute for the selected method
+            pairs_display = []
             for i in range(len(corr.columns)):
                 for j in range(i + 1, len(corr.columns)):
                     val = corr.iloc[i, j]
                     if abs(val) > 0.8:
-                        pairs.append({
+                        pairs_display.append({
                             "Feature A": corr.columns[i],
                             "Feature B": corr.columns[j],
                             "Correlation": round(val, 4),
                         })
-            if pairs:
-                st.dataframe(pd.DataFrame(pairs), width="stretch", hide_index=True)
+            if pairs_display:
+                st.dataframe(pd.DataFrame(pairs_display), width="stretch", hide_index=True)
             else:
                 st.success("No highly correlated pairs found (|r| > 0.8).")
         else:
@@ -150,23 +190,12 @@ def render():
     # ── Missing Values ─────────────────────────────────────────────────────────
     with tab_missing:
         st.subheader("Missing Value Analysis")
-        miss = df.isnull().sum()
-        miss = miss[miss > 0].sort_values(ascending=False)
 
-        if len(miss) == 0:
+        if miss_df.empty:
             st.success("No missing values found!")
         else:
-            miss_df = pd.DataFrame({
-                "Column": miss.index,
-                "Missing": miss.values,
-                "% Missing": (miss.values / len(df) * 100).round(2),
-            })
             st.dataframe(miss_df, width="stretch", hide_index=True)
-
-            fig = px.bar(miss_df, x="Column", y="% Missing", color="% Missing",
-                         color_continuous_scale="Reds", text_auto=".1f")
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(miss_chart_fig, width="stretch")
 
             # Missing value heatmap (sample if large)
             st.markdown("#### Missing Value Pattern")
@@ -221,6 +250,10 @@ def render():
     # ── PDF Export ─────────────────────────────────────────────────────────
     st.divider()
     _tables = [_serialize_df(desc_stats_df, "Descriptive Statistics")]
+    if not corr_pairs_df.empty:
+        _tables.append(_serialize_df(corr_pairs_df, "Highly Correlated Pairs (|r| > 0.8)"))
+    if not miss_df.empty:
+        _tables.append(_serialize_df(miss_df, "Missing Value Summary"))
     if not out_df_default.empty:
         _tables.append(_serialize_df(out_df_default, "Outlier Summary (IQR)"))
 
@@ -241,9 +274,12 @@ def render():
 
     _include_chart = st.checkbox("Include charts in PDF", value=True, key="prof_pdf_chart")
     if _include_chart:
-        _log_entry["figures"] = [
-            {"label": "Column Types", "fig_dict": type_chart_fig.to_dict()}
-        ]
+        _figures = [{"label": "Column Types", "fig_dict": type_chart_fig.to_dict()}]
+        if corr_heatmap_fig is not None:
+            _figures.append({"label": "Correlation Matrix (Pearson)", "fig_dict": corr_heatmap_fig.to_dict()})
+        if miss_chart_fig is not None:
+            _figures.append({"label": "Missing Values", "fig_dict": miss_chart_fig.to_dict()})
+        _log_entry["figures"] = _figures
 
     exp_col1, exp_col2 = st.columns(2)
     with exp_col1:

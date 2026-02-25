@@ -337,9 +337,13 @@ def render():
         )
         _include_chart = st.checkbox("Include charts in PDF", value=True, key="hp_pdf_chart")
         if _include_chart:
-            _log_entry["figures"] = [
-                {"label": "Optimization History", "fig_dict": hist_fig.to_dict()},
-            ]
+            _hp_figures = [{"label": "Optimization History", "fig_dict": hist_fig.to_dict()}]
+            if _imp_df is not None:
+                _imp_fig = px.bar(_imp_df, x="Importance", y="Parameter", orientation="h",
+                                  color="Importance", color_continuous_scale="Viridis")
+                _imp_fig.update_layout(height=400, yaxis=dict(autorange="reversed"))
+                _hp_figures.append({"label": "Parameter Importance", "fig_dict": _imp_fig.to_dict()})
+            _log_entry["figures"] = _hp_figures
         exp_col1, exp_col2 = st.columns(2)
         with exp_col1:
             if st.button("Add to Report", key="hp_add_report"):

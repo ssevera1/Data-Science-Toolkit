@@ -181,6 +181,20 @@ def render():
         _tables = []
         if len(result.get("multivariate_tests", [])) > 0:
             _tables.append(_serialize_df(result["multivariate_tests"], "Multivariate Tests"))
+        # Per-model performance summary
+        _model_summary_rows = []
+        for _m in result.get("individual_models", []):
+            _model_summary_rows.append({
+                "DV": _m["dv"],
+                "R²": round(_m["r_squared"], 4),
+                "Adj. R²": round(_m["adj_r_squared"], 4),
+                "F": round(_m["f_stat"], 4),
+                "p (F)": round(_m["f_p"], 6),
+                "AIC": round(_m["aic"], 1),
+                "BIC": round(_m["bic"], 1),
+            })
+        if _model_summary_rows:
+            _tables.append(_serialize_df(pd.DataFrame(_model_summary_rows), "Model Performance Summary"))
         for _m in result.get("individual_models", []):
             _tables.append(_serialize_df(_m["coef_table"], f"Coefficients: {_m['dv']}"))
         _log_entry = build_log_entry(
