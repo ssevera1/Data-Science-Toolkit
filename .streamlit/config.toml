@@ -4,5 +4,8 @@ maxUploadSize = 200
 headless = true
 enableXsrfProtection = true
 
+[theme]
+base = "light"
+
 [browser]
 gatherUsageStats = false
