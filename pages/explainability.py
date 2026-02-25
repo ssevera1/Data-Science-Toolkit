@@ -8,6 +8,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from utils.theme import page_header, set_matplotlib_theme
 from core.data_manager import sanitize_csv as _sanitize_csv
+from core.state import log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def _guard():
@@ -109,22 +111,27 @@ def render():
     with st.spinner("Training model..."):
         model, scaler, X_scaled = train_model(X, y, model_choice, task, feature_hash)
 
+    # Pre-compute feature importance data (used in tab and PDF export)
+    imp_df = None
+    imp_fig = None
+    if hasattr(model, "feature_importances_"):
+        importances = model.feature_importances_
+        imp_df = pd.DataFrame({
+            "Feature": feature_cols,
+            "Importance": importances,
+        }).sort_values("Importance", ascending=False)
+
+        imp_fig = px.bar(imp_df, x="Importance", y="Feature", orientation="h",
+                         color="Importance", color_continuous_scale="Viridis")
+        imp_fig.update_layout(height=max(400, len(feature_cols) * 25),
+                              yaxis=dict(autorange="reversed"))
+
     # ── Feature Importance ─────────────────────────────────────────────────────
     with tab_importance:
         st.subheader("Feature Importance (Built-in)")
 
-        if hasattr(model, "feature_importances_"):
-            importances = model.feature_importances_
-            imp_df = pd.DataFrame({
-                "Feature": feature_cols,
-                "Importance": importances,
-            }).sort_values("Importance", ascending=False)
-
-            fig = px.bar(imp_df, x="Importance", y="Feature", orientation="h",
-                         color="Importance", color_continuous_scale="Viridis")
-            fig.update_layout(height=max(400, len(feature_cols) * 25),
-                              yaxis=dict(autorange="reversed"))
-            st.plotly_chart(fig, width="stretch")
+        if imp_df is not None and imp_fig is not None:
+            st.plotly_chart(imp_fig, width="stretch")
 
             st.dataframe(imp_df, width="stretch", hide_index=True)
 
@@ -306,6 +313,48 @@ def render():
                     plt.tight_layout()
                     st.pyplot(fig)
                     plt.close()
+
+    # ── PDF Export ─────────────────────────────────────────────────────────
+    st.divider()
+
+    _tables = []
+    if imp_df is not None:
+        _tables.append(_serialize_df(imp_df, "Feature Importance"))
+
+    _log_entry = build_log_entry(
+        entry_type="explainability",
+        title=f"Model Explainability: {target} ({model_choice})",
+        result={
+            "model": model_choice,
+            "task": task,
+            "target": target,
+            "n_features": len(feature_cols),
+        },
+        tables=_tables,
+        variables={"target": target, "model": model_choice, "task": task},
+        dataset_name=st.session_state.get("file_name", ""),
+    )
+
+    _include_chart = st.checkbox("Include charts in PDF", value=True, key="exp_pdf_chart")
+    if _include_chart and imp_fig is not None:
+        _log_entry["figures"] = [
+            {"label": "Feature Importance", "fig_dict": imp_fig.to_dict()},
+        ]
+
+    _exp_col1, _exp_col2 = st.columns(2)
+    with _exp_col1:
+        if st.button("Add to Report", key="exp_add_report"):
+            if log_result(_log_entry):
+                st.success("Added to report log.")
+            else:
+                st.error("Report log is full (100 entries). Clear it first.")
+    with _exp_col2:
+        st.download_button(
+            "Export PDF",
+            data=generate_single_report(_log_entry, include_charts=_include_chart),
+            file_name="explainability.pdf",
+            mime="application/pdf",
+        )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

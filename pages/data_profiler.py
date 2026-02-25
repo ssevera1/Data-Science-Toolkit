@@ -5,6 +5,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from utils.theme import page_header, get_colors
+from core.state import log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 def _guard():
@@ -19,6 +21,43 @@ def render():
     _guard()
     df = st.session_state["df"]
 
+    # ── Pre-compute data for tabs and PDF export ──────────────────────────────
+    num_dups = df.duplicated().sum()
+    mem = df.memory_usage(deep=True).sum()
+    mem_str = f"{mem / 1024**2:.2f} MB"
+    total_cells = df.shape[0] * df.shape[1]
+    missing_pct_str = f"{df.isnull().sum().sum() / total_cells * 100:.2f}%" if total_cells > 0 else "0.00%"
+    desc_stats_df = df.describe(include="all").T
+
+    # Column types chart (built once, used in tab + PDF)
+    type_counts = df.dtypes.astype(str).value_counts().reset_index()
+    type_counts.columns = ["Type", "Count"]
+    type_chart_fig = px.bar(type_counts, x="Type", y="Count", color="Type", text_auto=True)
+    type_chart_fig.update_layout(showlegend=False, height=300)
+
+    # Outlier summary (IQR method, default multiplier 1.5)
+    num_cols = df.select_dtypes(include="number").columns.tolist()
+    _default_iqr_mult = 1.5
+    outlier_summary_default = []
+    for col in num_cols:
+        q1 = df[col].quantile(0.25)
+        q3 = df[col].quantile(0.75)
+        iqr = q3 - q1
+        lower = q1 - _default_iqr_mult * iqr
+        upper = q3 + _default_iqr_mult * iqr
+        n_outliers = ((df[col] < lower) | (df[col] > upper)).sum()
+        outlier_summary_default.append({
+            "Column": col,
+            "Q1": round(q1, 4),
+            "Q3": round(q3, 4),
+            "IQR": round(iqr, 4),
+            "Lower Bound": round(lower, 4),
+            "Upper Bound": round(upper, 4),
+            "Outliers": n_outliers,
+            "% Outliers": round(n_outliers / len(df) * 100, 2),
+        })
+    out_df_default = pd.DataFrame(outlier_summary_default) if outlier_summary_default else pd.DataFrame()
+
     tab_overview, tab_dist, tab_corr, tab_missing, tab_outliers = st.tabs(
         ["Overview", "Distributions", "Correlations", "Missing Values", "Outliers"]
     )
@@ -29,24 +68,17 @@ def render():
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Rows", f"{len(df):,}")
         c2.metric("Columns", f"{df.shape[1]}")
-        num_dups = df.duplicated().sum()
         c3.metric("Duplicate Rows", f"{num_dups:,}")
-        mem = df.memory_usage(deep=True).sum()
-        c4.metric("Memory", f"{mem / 1024**2:.2f} MB")
+        c4.metric("Memory", mem_str)
 
         st.markdown("#### Descriptive Statistics")
-        st.dataframe(df.describe(include="all").T, width="stretch")
+        st.dataframe(desc_stats_df, width="stretch")
 
         st.markdown("#### Column Types")
-        type_counts = df.dtypes.astype(str).value_counts().reset_index()
-        type_counts.columns = ["Type", "Count"]
-        fig = px.bar(type_counts, x="Type", y="Count", color="Type", text_auto=True)
-        fig.update_layout(showlegend=False, height=300)
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(type_chart_fig, width="stretch")
 
     # ── Distributions ──────────────────────────────────────────────────────────
     with tab_dist:
-        num_cols = df.select_dtypes(include="number").columns.tolist()
         cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
 
         st.subheader("Numeric Distributions")
@@ -151,28 +183,31 @@ def render():
     # ── Outliers ───────────────────────────────────────────────────────────────
     with tab_outliers:
         st.subheader("Outlier Detection (IQR Method)")
-        num_cols = df.select_dtypes(include="number").columns.tolist()
         if num_cols:
             iqr_mult = st.slider("IQR Multiplier", 1.0, 3.0, 1.5, 0.1)
-            outlier_summary = []
-            for col in num_cols:
-                q1 = df[col].quantile(0.25)
-                q3 = df[col].quantile(0.75)
-                iqr = q3 - q1
-                lower = q1 - iqr_mult * iqr
-                upper = q3 + iqr_mult * iqr
-                n_outliers = ((df[col] < lower) | (df[col] > upper)).sum()
-                outlier_summary.append({
-                    "Column": col,
-                    "Q1": round(q1, 4),
-                    "Q3": round(q3, 4),
-                    "IQR": round(iqr, 4),
-                    "Lower Bound": round(lower, 4),
-                    "Upper Bound": round(upper, 4),
-                    "Outliers": n_outliers,
-                    "% Outliers": round(n_outliers / len(df) * 100, 2),
-                })
-            out_df = pd.DataFrame(outlier_summary)
+            # Recompute with user-selected multiplier for display
+            if iqr_mult != _default_iqr_mult:
+                outlier_summary = []
+                for col in num_cols:
+                    q1 = df[col].quantile(0.25)
+                    q3 = df[col].quantile(0.75)
+                    iqr = q3 - q1
+                    lower = q1 - iqr_mult * iqr
+                    upper = q3 + iqr_mult * iqr
+                    n_outliers = ((df[col] < lower) | (df[col] > upper)).sum()
+                    outlier_summary.append({
+                        "Column": col,
+                        "Q1": round(q1, 4),
+                        "Q3": round(q3, 4),
+                        "IQR": round(iqr, 4),
+                        "Lower Bound": round(lower, 4),
+                        "Upper Bound": round(upper, 4),
+                        "Outliers": n_outliers,
+                        "% Outliers": round(n_outliers / len(df) * 100, 2),
+                    })
+                out_df = pd.DataFrame(outlier_summary)
+            else:
+                out_df = out_df_default
             st.dataframe(out_df, width="stretch", hide_index=True)
 
             sel_box = st.multiselect("Box plots for", num_cols, default=num_cols[:6])
@@ -182,6 +217,49 @@ def render():
                 st.plotly_chart(fig, width="stretch")
         else:
             st.info("No numeric columns found.")
+
+    # ── PDF Export ─────────────────────────────────────────────────────────
+    st.divider()
+    _tables = [_serialize_df(desc_stats_df, "Descriptive Statistics")]
+    if not out_df_default.empty:
+        _tables.append(_serialize_df(out_df_default, "Outlier Summary (IQR)"))
+
+    _log_entry = build_log_entry(
+        entry_type="data_profiler",
+        title=f"Data Profiler: {st.session_state.get('file_name', 'Dataset')}",
+        result={
+            "rows": len(df),
+            "columns": df.shape[1],
+            "duplicates": int(num_dups),
+            "memory": mem_str,
+            "missing_pct": missing_pct_str,
+        },
+        tables=_tables,
+        variables={},
+        dataset_name=st.session_state.get("file_name", ""),
+    )
+
+    _include_chart = st.checkbox("Include charts in PDF", value=True, key="prof_pdf_chart")
+    if _include_chart:
+        _log_entry["figures"] = [
+            {"label": "Column Types", "fig_dict": type_chart_fig.to_dict()}
+        ]
+
+    exp_col1, exp_col2 = st.columns(2)
+    with exp_col1:
+        if st.button("Add to Report", key="prof_add_report"):
+            if log_result(_log_entry):
+                st.success("Added to report log.")
+            else:
+                st.error("Report log is full (100 entries). Clear it first.")
+    with exp_col2:
+        st.download_button(
+            "Export PDF",
+            data=generate_single_report(_log_entry, include_charts=_include_chart),
+            file_name="data_profiler.pdf",
+            mime="application/pdf",
+            key="prof_export_pdf",
+        )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

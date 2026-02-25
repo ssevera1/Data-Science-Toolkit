@@ -3,7 +3,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from core.state import set_var_type
+from core.state import set_var_type, clear_result_caches
 from utils.theme import get_colors, hex_to_rgb, _is_light
 
 
@@ -152,6 +152,7 @@ def render():
                     st.session_state["df"] = df
                     st.session_state["original_df"] = df.copy()
                     st.session_state["file_name"] = uploaded_file.name
+                    clear_result_caches()
                     _auto_detect_var_types(df)
                     st.success(
                         f"Loaded **{uploaded_file.name}** — {df.shape[0]:,} rows x {df.shape[1]} columns. "

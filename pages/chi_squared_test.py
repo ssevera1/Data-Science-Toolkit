@@ -11,6 +11,8 @@ from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 from charts.theme import apply_theme, get_chart_colors
 
+_CACHE_KEY = "_result_chi2"
+
 
 def render():
     st.title("Chi-Squared Test")
@@ -36,6 +38,20 @@ def render():
             return
 
         result = chi_squared_test(df, var1, var2, alpha=alpha)
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (var1, var2, alpha),
+            "result": result,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (var1, var2, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
 
         tab_res, tab_assume, tab_chart = st.tabs(["Results", "Assumptions", "Charts"])
 
@@ -144,4 +160,3 @@ The chi-squared test of independence tests whether there is a **significant asso
 #### Charts Tab
 - **Grouped bar chart** -- displays observed frequencies broken down by both variables, making it easy to visually compare the distribution of categories.
         """)
-

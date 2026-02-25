@@ -11,6 +11,8 @@ from charts.boxplot import grouped_boxplot
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_anova2"
+
 
 def render():
     st.title("Two-Way ANOVA")
@@ -46,6 +48,22 @@ def render():
             return
 
         result = twoway_anova(clean, dv, factor1, factor2, alpha=alpha)
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (dv, factor1, factor2, alpha),
+            "result": result,
+            "clean": clean,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (dv, factor1, factor2, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        clean = cached["clean"]
 
         tab_res, tab_assume, tab_chart = st.tabs(["Results", "Assumptions", "Charts"])
 
@@ -138,4 +156,3 @@ Two-way ANOVA tests the effects of **two categorical factors** and their **inter
 #### Charts Tab
 - **Grouped bar chart** -- shows mean values of the DV broken down by both factors, making it easy to visualize main effects and interactions.
         """)
-

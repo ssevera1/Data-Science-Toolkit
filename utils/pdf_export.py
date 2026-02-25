@@ -835,6 +835,123 @@ def _render_multivariate_regression(pdf: _DSReport, entry: dict, include_charts:
             pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
 
 
+def _render_profiler(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render Data Profiler summary."""
+    result = entry["result"]
+
+    pdf.section_heading(entry["title"])
+
+    pdf.kv_line("Rows", _safe_str(result.get("rows")))
+    pdf.kv_line("Columns", _safe_str(result.get("columns")))
+    pdf.kv_line("Duplicate Rows", _safe_str(result.get("duplicates")))
+    pdf.kv_line("Memory", _safe_str(result.get("memory")))
+    pdf.kv_line("Missing Cells %", _safe_str(result.get("missing_pct")))
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_class_imbalance(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render Class Imbalance results."""
+    result = entry["result"]
+
+    pdf.section_heading(entry["title"])
+
+    pdf.kv_line("Target Column", str(result.get("target", "N/A")))
+    pdf.kv_line("Method", str(result.get("method", "N/A")))
+    pdf.kv_line("Imbalance Ratio (before)", _safe_str(result.get("imbalance_ratio")))
+    pdf.kv_line("Rows Before", _safe_str(result.get("rows_before")))
+    pdf.kv_line("Rows After", _safe_str(result.get("rows_after")))
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_data_drift(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render Data Drift detection results."""
+    result = entry["result"]
+
+    pdf.section_heading(entry["title"])
+
+    pdf.kv_line("Features Tested", _safe_str(result.get("n_features")))
+    pdf.kv_line("Drift Detected", _safe_str(result.get("n_drifted")))
+    pdf.kv_line("Drift %", _safe_str(result.get("drift_pct")))
+    pdf.kv_line("Alpha", _safe_str(result.get("alpha")))
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_explainability(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render Model Explainability results."""
+    result = entry["result"]
+
+    pdf.section_heading(entry["title"])
+
+    pdf.kv_line("Model", str(result.get("model", "N/A")))
+    pdf.kv_line("Task", str(result.get("task", "N/A")))
+    pdf.kv_line("Target", str(result.get("target", "N/A")))
+    pdf.kv_line("Features", _safe_str(result.get("n_features")))
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
+def _render_hyperparameter(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render Hyperparameter Tuning results."""
+    result = entry["result"]
+
+    pdf.section_heading(entry["title"])
+
+    pdf.kv_line("Model", str(result.get("model", "N/A")))
+    pdf.kv_line("Task", str(result.get("task", "N/A")))
+    pdf.kv_line("Metric", str(result.get("metric", "N/A")))
+    pdf.kv_line("Best Score", _safe_str(result.get("best_score")))
+    pdf.kv_line("Trials", _safe_str(result.get("n_trials")))
+    pdf.kv_line("CV Folds", _safe_str(result.get("cv_folds")))
+    pdf.ln(3)
+
+    # Best parameters
+    best_params = result.get("best_params", {})
+    if best_params:
+        pdf.sub_heading("Best Hyperparameters")
+        for k, v in best_params.items():
+            pdf.kv_line(str(k), _safe_str(v))
+        pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
 def _render_fallback(pdf: _DSReport, entry: dict, include_charts: bool):
     """Fallback renderer for unknown entry types."""
     pdf.section_heading(entry.get("title", "Analysis Result"))
@@ -875,6 +992,11 @@ _RENDERERS = {
     "descriptive_stats": _render_descriptive,
     "model_arena": _render_model_arena,
     "feature_selection": _render_feature_selection,
+    "data_profiler": _render_profiler,
+    "class_imbalance": _render_class_imbalance,
+    "data_drift": _render_data_drift,
+    "explainability": _render_explainability,
+    "hyperparameter_tuning": _render_hyperparameter,
 }
 
 

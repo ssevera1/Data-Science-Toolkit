@@ -13,6 +13,8 @@ from charts.qq_plot import qq_plot
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_mv_reg"
+
 
 def render():
     st.title("Multivariate Regression")
@@ -35,7 +37,7 @@ def render():
 
     with st.expander("Options"):
         alpha = st.slider(
-            "Significance level (α)", 0.01, 0.10, 0.05, 0.01, key="mvr_alpha"
+            "Significance level (\u03b1)", 0.01, 0.10, 0.05, 0.01, key="mvr_alpha"
         )
 
     # ── Validation & computation ──────────────────────────────────────────
@@ -63,6 +65,20 @@ def render():
             )
             return
 
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (tuple(dv_cols), tuple(predictors), alpha),
+            "result": result,
+        }
+
+    # ── Cache invalidation ─────────────────────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (tuple(dv_cols or []), tuple(predictors or []), alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+
         # ── Tabs ──────────────────────────────────────────────────────────
         tab_res, tab_models, tab_assume, tab_chart = st.tabs(
             ["Results", "Individual Models", "Assumptions", "Charts"]
@@ -78,7 +94,7 @@ def render():
                 ].iloc[0]
                 render_significance_result(
                     "Multivariate Test",
-                    "Wilks' Λ F",
+                    "Wilks' \u039b F",
                     first_wilks["F"],
                     first_wilks["p"],
                     (int(first_wilks["Num DF"]), int(first_wilks["Den DF"])),
@@ -108,8 +124,8 @@ def render():
                 )
 
                 cols = st.columns(4)
-                cols[0].metric("R²", f"{m['r_squared']:.4f}")
-                cols[1].metric("Adj. R²", f"{m['adj_r_squared']:.4f}")
+                cols[0].metric("R\u00b2", f"{m['r_squared']:.4f}")
+                cols[1].metric("Adj. R\u00b2", f"{m['adj_r_squared']:.4f}")
                 cols[2].metric("AIC", f"{m['aic']:.1f}")
                 cols[3].metric("BIC", f"{m['bic']:.1f}")
 
@@ -133,7 +149,7 @@ def render():
             st.markdown("**Residual Normality per DV (Shapiro-Wilk)**")
             for dv, sw in result["assumptions"]["residual_normality"].items():
                 render_assumption_check(
-                    f"Residuals — {dv}",
+                    f"Residuals \u2014 {dv}",
                     sw["statistic"],
                     sw["p_value"],
                     sw["passed"],

@@ -4,6 +4,10 @@ import numpy as np
 import plotly.express as px
 from utils.theme import page_header, get_colors
 from core.data_manager import sanitize_csv as _sanitize_csv
+from core.state import log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
+
+_CACHE_KEY = "_result_class_imb"
 
 
 def _guard():
@@ -224,54 +228,124 @@ def render():
                     # Reorder columns to match original and defragment
                     new_df = result[[c for c in df.columns if c in result.columns]].copy()
 
-                # Show comparison
-                st.markdown("#### Before vs After")
-                c1, c2 = st.columns(2)
+                # Build before/after DataFrames for cache
+                before_vc = vc_df.copy()
 
-                with c1:
-                    st.write("**Before**")
-                    before_vc = vc_df.copy()
-                    st.dataframe(before_vc, width="stretch", hide_index=True)
-                    st.write(f"Total: {len(df):,}")
+                after_vc = y_res.value_counts().reset_index()
+                after_vc.columns = ["Class", "Count"]
+                after_vc["Percentage"] = (after_vc["Count"] / len(y_res) * 100).round(2)
 
-                with c2:
-                    st.write("**After**")
-                    after_vc = y_res.value_counts().reset_index()
-                    after_vc.columns = ["Class", "Count"]
-                    after_vc["Percentage"] = (after_vc["Count"] / len(y_res) * 100).round(2)
-                    st.dataframe(after_vc, width="stretch", hide_index=True)
-                    st.write(f"Total: {len(new_df):,}")
-
-                # Comparison chart
                 compare = pd.DataFrame({
                     "Class": list(vc.index) + list(y_res.value_counts().index),
                     "Count": list(vc.values) + list(y_res.value_counts().values),
                     "Stage": ["Before"] * len(vc) + ["After"] * len(y_res.value_counts()),
                 })
-                _ci_c = get_colors()
-                fig = px.bar(compare, x="Class", y="Count", color="Stage", barmode="group",
-                             color_discrete_map={"Before": _ci_c["error"], "After": _ci_c["success"]})
-                fig.update_layout(height=400)
-                st.plotly_chart(fig, width="stretch")
 
-                dl_col, accept_col = st.columns(2)
-                with dl_col:
-                    csv_data = _sanitize_csv(new_df).to_csv(index=False).encode("utf-8")
-                    st.download_button(
-                        "Download Resampled CSV",
-                        data=csv_data,
-                        file_name="resampled_data.csv",
-                        mime="text/csv",
-                        width="stretch",
-                    )
-                with accept_col:
-                    if st.button("Accept & Update Dataset", width="stretch"):
-                        st.session_state["df"] = new_df
-                        st.success("Dataset updated with resampled data.")
-                        st.rerun()
+                # Store results in session state cache
+                st.session_state[_CACHE_KEY] = {
+                    "inputs": (target, method),
+                    "new_df": new_df,
+                    "before_vc": before_vc,
+                    "after_vc": after_vc,
+                    "compare": compare,
+                    "imbalance_ratio": imbalance_ratio,
+                    "rows_before": len(df),
+                    "rows_after": len(new_df),
+                }
 
             except Exception as e:
                 st.error(f"Resampling failed: {e}")
+
+    # ── Cache invalidation ────────────────────────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached.get("inputs") != (target, method):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    # ── Render cached results ─────────────────────────────────────────────
+    if cached:
+        new_df = cached["new_df"]
+        before_vc = cached["before_vc"]
+        after_vc = cached["after_vc"]
+        compare = cached["compare"]
+
+        st.markdown("#### Before vs After")
+        c1, c2 = st.columns(2)
+
+        with c1:
+            st.write("**Before**")
+            st.dataframe(before_vc, width="stretch", hide_index=True)
+            st.write(f"Total: {cached['rows_before']:,}")
+
+        with c2:
+            st.write("**After**")
+            st.dataframe(after_vc, width="stretch", hide_index=True)
+            st.write(f"Total: {cached['rows_after']:,}")
+
+        # Comparison chart
+        _ci_c = get_colors()
+        fig = px.bar(compare, x="Class", y="Count", color="Stage", barmode="group",
+                     color_discrete_map={"Before": _ci_c["error"], "After": _ci_c["success"]})
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, width="stretch")
+
+        dl_col, accept_col = st.columns(2)
+        with dl_col:
+            csv_data = _sanitize_csv(new_df).to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download Resampled CSV",
+                data=csv_data,
+                file_name="resampled_data.csv",
+                mime="text/csv",
+                width="stretch",
+            )
+        with accept_col:
+            if st.button("Accept & Update Dataset", width="stretch"):
+                st.session_state["df"] = new_df
+                del st.session_state[_CACHE_KEY]
+                st.success("Dataset updated with resampled data.")
+                st.rerun()
+
+        # ── PDF Export ─────────────────────────────────────────────────
+        st.divider()
+        _log_entry = build_log_entry(
+            entry_type="class_imbalance",
+            title=f"Class Imbalance: {target}",
+            result={
+                "target": target,
+                "method": method,
+                "imbalance_ratio": cached["imbalance_ratio"],
+                "rows_before": cached["rows_before"],
+                "rows_after": cached["rows_after"],
+            },
+            tables=[
+                _serialize_df(before_vc, "Before Resampling"),
+                _serialize_df(after_vc, "After Resampling"),
+            ],
+            variables={"target": target, "method": method},
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include chart in PDF", value=True, key="ci_pdf_chart")
+        if _include_chart:
+            _fig = px.bar(compare, x="Class", y="Count", color="Stage", barmode="group",
+                          color_discrete_map={"Before": _ci_c["error"], "After": _ci_c["success"]})
+            _fig.update_layout(height=400)
+            _log_entry["figures"] = [{"label": "Before vs After", "fig_dict": _fig.to_dict()}]
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="ci_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="class_imbalance.pdf",
+                mime="application/pdf",
+                key="ci_pdf_download",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

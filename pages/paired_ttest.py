@@ -15,6 +15,8 @@ from charts.qq_plot import qq_plot
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report
 
+_CACHE_KEY = "_result_paired_ttest"
+
 
 def render():
     st.title("Paired Samples t-Test")
@@ -46,6 +48,27 @@ def render():
 
         result = paired_ttest(df[var1], df[var2], alpha=alpha)
 
+        clean = df[[var1, var2]].dropna()
+        clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
+        clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
+        clean = clean.dropna()
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (var1, var2, alpha),
+            "result": result,
+            "clean": clean,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (var1, var2, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        clean = cached["clean"]
+
         tab_res, tab_assume, tab_chart = st.tabs(["Results", "Assumptions", "Charts"])
 
         with tab_res:
@@ -75,10 +98,6 @@ def render():
         with tab_chart:
             c1, c2 = st.columns(2)
             with c1:
-                clean = df[[var1, var2]].dropna()
-                clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
-                clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
-                clean = clean.dropna()
                 fig = paired_boxplot(clean, var1, var2)
                 st.plotly_chart(fig, width="stretch")
             with c2:
@@ -98,12 +117,8 @@ def render():
         )
         _include_chart = st.checkbox("Include charts in PDF", value=True, key="paired_pdf_chart")
         if _include_chart:
-            clean2 = df[[var1, var2]].dropna()
-            clean2[var1] = pd.to_numeric(clean2[var1], errors="coerce")
-            clean2[var2] = pd.to_numeric(clean2[var2], errors="coerce")
-            clean2 = clean2.dropna()
-            _fig_box = paired_boxplot(clean2, var1, var2)
-            _diff = clean2[var1] - clean2[var2]
+            _fig_box = paired_boxplot(clean, var1, var2)
+            _diff = clean[var1] - clean[var2]
             _fig_qq = qq_plot(_diff, "Differences")
             _log_entry["figures"] = [
                 {"label": "Paired Box Plot", "fig_dict": _fig_box.to_dict()},
@@ -155,4 +170,3 @@ The paired samples t-test compares the **means of two related measurements** tak
 - **Paired box plot** -- shows the distribution of both variables side by side.
 - **Q-Q plot of differences** -- assesses normality of the difference scores; points should follow the diagonal if differences are normally distributed.
         """)
-

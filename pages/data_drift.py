@@ -7,6 +7,8 @@ from plotly.subplots import make_subplots
 from scipy import stats
 from utils.theme import page_header, get_colors
 from core.data_manager import sanitize_csv as _sanitize_csv
+from core.state import log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
 
 MAX_SIZE_MB = 50
@@ -90,51 +92,84 @@ def render():
     st.subheader("2. Drift Detection Results")
     alpha = st.slider("Significance level (alpha)", 0.01, 0.10, 0.05, 0.01)
 
+    # ── Compute drift results before tabs (needed for both display and PDF) ──
+    drift_df = None
+    cat_df = None
+
+    if common_cols:
+        drift_results = []
+        for col in common_cols:
+            ref_vals = ref_df[col].dropna()
+            cur_vals = cur_df[col].dropna()
+
+            # KS Test
+            ks_stat, ks_p = stats.ks_2samp(ref_vals, cur_vals)
+
+            # Welch's t-test
+            t_stat, t_p = stats.ttest_ind(ref_vals, cur_vals, equal_var=False)
+
+            # Population Stability Index (PSI)
+            def compute_psi(ref, cur, bins=10):
+                breakpoints = np.linspace(min(ref.min(), cur.min()),
+                                          max(ref.max(), cur.max()), bins + 1)
+                ref_pct = np.histogram(ref, breakpoints)[0] / len(ref)
+                cur_pct = np.histogram(cur, breakpoints)[0] / len(cur)
+                ref_pct = np.clip(ref_pct, 1e-6, None)
+                cur_pct = np.clip(cur_pct, 1e-6, None)
+                psi = np.sum((cur_pct - ref_pct) * np.log(cur_pct / ref_pct))
+                return psi
+
+            psi = compute_psi(ref_vals, cur_vals)
+
+            drifted = ks_p < alpha
+            drift_results.append({
+                "Feature": col,
+                "KS Statistic": round(ks_stat, 4),
+                "KS p-value": round(ks_p, 6),
+                "T-test p-value": round(t_p, 6),
+                "PSI": round(psi, 4),
+                "Ref Mean": round(ref_vals.mean(), 4),
+                "Cur Mean": round(cur_vals.mean(), 4),
+                "Mean Shift %": round(abs(cur_vals.mean() - ref_vals.mean()) / (abs(ref_vals.mean()) + 1e-10) * 100, 2),
+                "Drift Detected": drifted,
+            })
+
+        drift_df = pd.DataFrame(drift_results).sort_values("KS p-value")
+
+    if common_cat_cols:
+        cat_results = []
+        for col in common_cat_cols:
+            ref_vc = ref_df[col].value_counts(normalize=True)
+            cur_vc = cur_df[col].value_counts(normalize=True)
+
+            # Chi-square test
+            all_cats = set(ref_vc.index) | set(cur_vc.index)
+            ref_counts = np.array([ref_df[col].value_counts().get(c, 0) for c in all_cats])
+            cur_counts = np.array([cur_df[col].value_counts().get(c, 0) for c in all_cats])
+
+            if len(all_cats) > 1:
+                contingency = np.array([ref_counts, cur_counts])
+                chi2, chi_p, dof, _ = stats.chi2_contingency(contingency)
+            else:
+                chi2, chi_p, dof = 0, 1, 0
+
+            cat_results.append({
+                "Feature": col,
+                "Unique (Ref)": ref_df[col].nunique(),
+                "Unique (Cur)": cur_df[col].nunique(),
+                "Chi2 Statistic": round(chi2, 4),
+                "Chi2 p-value": round(chi_p, 6),
+                "Drift Detected": chi_p < alpha,
+            })
+
+        cat_df = pd.DataFrame(cat_results).sort_values("Chi2 p-value")
+
     tab_num, tab_cat, tab_viz = st.tabs(["Numeric Features", "Categorical Features", "Distributions"])
 
     with tab_num:
-        if not common_cols:
+        if drift_df is None:
             st.info("No common numeric columns.")
         else:
-            drift_results = []
-            for col in common_cols:
-                ref_vals = ref_df[col].dropna()
-                cur_vals = cur_df[col].dropna()
-
-                # KS Test
-                ks_stat, ks_p = stats.ks_2samp(ref_vals, cur_vals)
-
-                # Welch's t-test
-                t_stat, t_p = stats.ttest_ind(ref_vals, cur_vals, equal_var=False)
-
-                # Population Stability Index (PSI)
-                def compute_psi(ref, cur, bins=10):
-                    breakpoints = np.linspace(min(ref.min(), cur.min()),
-                                              max(ref.max(), cur.max()), bins + 1)
-                    ref_pct = np.histogram(ref, breakpoints)[0] / len(ref)
-                    cur_pct = np.histogram(cur, breakpoints)[0] / len(cur)
-                    ref_pct = np.clip(ref_pct, 1e-6, None)
-                    cur_pct = np.clip(cur_pct, 1e-6, None)
-                    psi = np.sum((cur_pct - ref_pct) * np.log(cur_pct / ref_pct))
-                    return psi
-
-                psi = compute_psi(ref_vals, cur_vals)
-
-                drifted = ks_p < alpha
-                drift_results.append({
-                    "Feature": col,
-                    "KS Statistic": round(ks_stat, 4),
-                    "KS p-value": round(ks_p, 6),
-                    "T-test p-value": round(t_p, 6),
-                    "PSI": round(psi, 4),
-                    "Ref Mean": round(ref_vals.mean(), 4),
-                    "Cur Mean": round(cur_vals.mean(), 4),
-                    "Mean Shift %": round(abs(cur_vals.mean() - ref_vals.mean()) / (abs(ref_vals.mean()) + 1e-10) * 100, 2),
-                    "Drift Detected": drifted,
-                })
-
-            drift_df = pd.DataFrame(drift_results).sort_values("KS p-value")
-
             n_drifted = drift_df["Drift Detected"].sum()
             c1, c2, c3 = st.columns(3)
             c1.metric("Features Tested", len(common_cols))
@@ -169,35 +204,9 @@ def render():
             """)
 
     with tab_cat:
-        if not common_cat_cols:
+        if cat_df is None:
             st.info("No common categorical columns.")
         else:
-            cat_results = []
-            for col in common_cat_cols:
-                ref_vc = ref_df[col].value_counts(normalize=True)
-                cur_vc = cur_df[col].value_counts(normalize=True)
-
-                # Chi-square test
-                all_cats = set(ref_vc.index) | set(cur_vc.index)
-                ref_counts = np.array([ref_df[col].value_counts().get(c, 0) for c in all_cats])
-                cur_counts = np.array([cur_df[col].value_counts().get(c, 0) for c in all_cats])
-
-                if len(all_cats) > 1:
-                    contingency = np.array([ref_counts, cur_counts])
-                    chi2, chi_p, dof, _ = stats.chi2_contingency(contingency)
-                else:
-                    chi2, chi_p, dof = 0, 1, 0
-
-                cat_results.append({
-                    "Feature": col,
-                    "Unique (Ref)": ref_df[col].nunique(),
-                    "Unique (Cur)": cur_df[col].nunique(),
-                    "Chi2 Statistic": round(chi2, 4),
-                    "Chi2 p-value": round(chi_p, 6),
-                    "Drift Detected": chi_p < alpha,
-                })
-
-            cat_df = pd.DataFrame(cat_results).sort_values("Chi2 p-value")
             st.dataframe(cat_df, width="stretch", hide_index=True)
 
             cat_csv = _sanitize_csv(cat_df).to_csv(index=False).encode("utf-8")
@@ -240,6 +249,69 @@ def render():
                              title=col, color_discrete_map={"Reference": _dc2["info"], "Current": _dc2["error"]})
                 fig.update_layout(height=400)
                 st.plotly_chart(fig, width="stretch")
+
+    # ── PDF Export ─────────────────────────────────────────────────────────
+    st.divider()
+
+    _n_features = len(common_cols) + len(common_cat_cols)
+    _n_drifted_num = int(drift_df["Drift Detected"].sum()) if drift_df is not None else 0
+    _n_drifted_cat = int(cat_df["Drift Detected"].sum()) if cat_df is not None else 0
+    _n_drifted_total = _n_drifted_num + _n_drifted_cat
+    _drift_pct = f"{_n_drifted_total / _n_features * 100:.1f}%" if _n_features > 0 else "0.0%"
+
+    _tables = []
+    if drift_df is not None:
+        _tables.append(_serialize_df(drift_df, "Numeric Drift Results"))
+    if cat_df is not None:
+        _tables.append(_serialize_df(cat_df, "Categorical Drift Results"))
+
+    _log_entry = build_log_entry(
+        entry_type="data_drift",
+        title="Data Drift Detection",
+        result={
+            "n_features": _n_features,
+            "n_drifted": _n_drifted_total,
+            "drift_pct": _drift_pct,
+            "alpha": alpha,
+        },
+        tables=_tables,
+        variables={
+            "numeric_features": len(common_cols),
+            "categorical_features": len(common_cat_cols),
+        },
+        dataset_name=st.session_state.get("file_name", ""),
+        alpha=alpha,
+    )
+
+    _include_chart = st.checkbox("Include charts in PDF", value=True, key="drift_pdf_chart")
+    if _include_chart and common_cols:
+        _figures = []
+        for _col in common_cols[:6]:
+            _fig = go.Figure()
+            _dc = get_colors()
+            _fig.add_trace(go.Histogram(x=ref_df[_col].dropna(), name="Reference",
+                                        opacity=0.6, marker_color=_dc["info"]))
+            _fig.add_trace(go.Histogram(x=cur_df[_col].dropna(), name="Current",
+                                        opacity=0.6, marker_color=_dc["error"]))
+            _fig.update_layout(barmode="overlay", title=_col, height=350)
+            _figures.append({"label": f"Distribution: {_col}", "fig_dict": _fig.to_dict()})
+        _log_entry["figures"] = _figures
+
+    exp_col1, exp_col2 = st.columns(2)
+    with exp_col1:
+        if st.button("Add to Report", key="drift_add_report"):
+            if log_result(_log_entry):
+                st.success("Added to report log.")
+            else:
+                st.error("Report log is full (100 entries). Clear it first.")
+    with exp_col2:
+        st.download_button(
+            "Export PDF",
+            data=generate_single_report(_log_entry, include_charts=_include_chart),
+            file_name="data_drift.pdf",
+            mime="application/pdf",
+            key="drift_export_pdf",
+        )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

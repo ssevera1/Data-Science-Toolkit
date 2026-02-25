@@ -10,6 +10,8 @@ from charts.boxplot import single_boxplot
 from core.state import get_df, get_var_type, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_descriptive"
+
 
 def render():
     st.title("Descriptive Statistics")
@@ -32,20 +34,49 @@ def render():
         metric_vars = [v for v in selected if get_var_type(v) in ("Metric", "Ordinal")]
         nominal_vars = [v for v in selected if get_var_type(v) == "Nominal"]
 
+        # Compute descriptive tables
+        desc_table = None
+        if metric_vars:
+            desc_table = compute_descriptives_table(df, metric_vars)
+
+        freq_tables = {}
+        if nominal_vars:
+            for var in nominal_vars:
+                freq_tables[var] = compute_frequency_table(df[var].dropna())
+
+        # Store in session state cache
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (tuple(selected),),
+            "metric_vars": metric_vars,
+            "nominal_vars": nominal_vars,
+            "desc_table": desc_table,
+            "freq_tables": freq_tables,
+        }
+
+    # ── Invalidate cache if inputs changed ──────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (tuple(selected),):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        metric_vars = cached["metric_vars"]
+        nominal_vars = cached["nominal_vars"]
+        desc_table = cached["desc_table"]
+        freq_tables = cached["freq_tables"]
+
         tab_results, tab_charts = st.tabs(["Results", "Charts"])
 
         with tab_results:
             if metric_vars:
                 st.markdown("### Numeric Variables")
-                desc_table = compute_descriptives_table(df, metric_vars)
                 st.dataframe(desc_table.T, width="stretch")
 
             if nominal_vars:
                 st.markdown("### Categorical Variables")
                 for var in nominal_vars:
                     st.markdown(f"**{var}**")
-                    freq = compute_frequency_table(df[var].dropna())
-                    st.dataframe(freq, width="stretch", hide_index=True)
+                    st.dataframe(freq_tables[var], width="stretch", hide_index=True)
 
         with tab_charts:
             if metric_vars:
@@ -64,12 +95,10 @@ def render():
         st.divider()
         _tables = []
         if metric_vars:
-            _desc_t = compute_descriptives_table(df, metric_vars)
-            _tables.append(_serialize_df(_desc_t.T, "Descriptive Statistics"))
+            _tables.append(_serialize_df(desc_table.T, "Descriptive Statistics"))
         if nominal_vars:
             for _nv in nominal_vars:
-                _freq = compute_frequency_table(df[_nv].dropna())
-                _tables.append(_serialize_df(_freq, f"Frequency: {_nv}"))
+                _tables.append(_serialize_df(freq_tables[_nv], f"Frequency: {_nv}"))
 
         _log_entry = build_log_entry(
             entry_type="descriptive_stats",

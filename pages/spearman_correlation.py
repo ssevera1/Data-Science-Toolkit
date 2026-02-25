@@ -11,6 +11,8 @@ from charts.scatter import correlation_scatter
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report
 
+_CACHE_KEY = "_result_spearman"
+
 
 def render():
     st.title("Spearman Correlation")
@@ -42,6 +44,27 @@ def render():
 
         result = spearman_correlation(df[var1], df[var2], alpha=alpha)
 
+        clean = df[[var1, var2]].dropna()
+        clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
+        clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
+        clean = clean.dropna()
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (var1, var2, alpha),
+            "result": result,
+            "clean": clean,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (var1, var2, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        clean = cached["clean"]
+
         tab_res, tab_chart = st.tabs(["Results", "Charts"])
 
         with tab_res:
@@ -60,11 +83,6 @@ def render():
             render_effect_size("Spearman ρ", result["rho"], interpret_r(result["rho"]))
 
         with tab_chart:
-            clean = df[[var1, var2]].dropna()
-            clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
-            clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
-            clean = clean.dropna()
-
             fig = correlation_scatter(clean, var1, var2, r_value=result["rho"])
             st.plotly_chart(fig, width="stretch")
 
@@ -129,4 +147,3 @@ Same as Pearson r:
 #### Charts Tab
 - **Scatter plot with trend line** -- visualizes the relationship between the two variables. Because Spearman uses ranks, the trend may appear curved even with a strong correlation.
         """)
-

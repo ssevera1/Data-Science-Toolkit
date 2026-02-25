@@ -12,6 +12,8 @@ from utils.pdf_export import build_log_entry, generate_single_report, _serialize
 import plotly.graph_objects as go
 from charts.theme import apply_theme, get_chart_colors
 
+_CACHE_KEY = "_result_log_reg"
+
 
 def render():
     st.title("Logistic Regression")
@@ -26,7 +28,7 @@ def render():
     predictors = select_multiple_variables("Predictor variables", key="log_pred", var_type="Metric")
 
     with st.expander("Options"):
-        alpha = st.slider("Significance level (α)", 0.01, 0.10, 0.05, 0.01, key="log_alpha")
+        alpha = st.slider("Significance level (\u03b1)", 0.01, 0.10, 0.05, 0.01, key="log_alpha")
 
     if dv and predictors and st.button("Calculate", type="primary"):
         if dv in predictors:
@@ -39,17 +41,39 @@ def render():
             st.error(result["error"])
             return
 
+        # Extract endog before caching (model object is not serializable)
+        _endog = result["model"].model.endog.copy()
+
+        # Remove non-serializable model object from result before caching
+        result_for_cache = {k: v for k, v in result.items() if k != "model"}
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (dv, tuple(predictors), alpha),
+            "result": result_for_cache,
+            "endog": _endog,
+        }
+
+    # ── Cache invalidation ─────────────────────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (dv, tuple(predictors or []), alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        _endog = cached["endog"]
+
         tab_res, tab_chart = st.tabs(["Results", "Charts"])
 
         with tab_res:
             render_significance_result(
-                "Model Fit (Likelihood Ratio)", "χ²", result["chi2"],
+                "Model Fit (Likelihood Ratio)", "\u03c7\u00b2", result["chi2"],
                 result["chi2_p"], alpha=alpha
             )
             st.markdown("---")
 
             cols = st.columns(4)
-            cols[0].metric("Pseudo R² (McFadden)", f"{result['pseudo_r_squared']:.4f}")
+            cols[0].metric("Pseudo R\u00b2 (McFadden)", f"{result['pseudo_r_squared']:.4f}")
             cols[1].metric("Accuracy", f"{result['accuracy']:.1%}")
             cols[2].metric("N", result["n"])
             cols[3].metric("AIC", f"{result['aic']:.1f}")
@@ -183,4 +207,3 @@ Logistic regression predicts a **binary outcome** (0 or 1) from one or more pred
 - **Logistic curve** (simple regression with one predictor) -- shows the S-shaped probability curve and the observed data points.
 - **Classification summary** (multiple regression) -- shows the number of correctly and incorrectly classified observations.
         """)
-

@@ -11,6 +11,8 @@ from charts.boxplot import grouped_boxplot
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_mann_whitney"
+
 
 def render():
     st.title("Mann-Whitney U Test")
@@ -47,6 +49,30 @@ def render():
 
         result = mann_whitney(g1, g2, alternative=alternative, alpha=alpha)
 
+        group_stats = pd.DataFrame({
+            "Group": [str(groups[0]), str(groups[1])],
+            "N": [result["n1"], result["n2"]],
+            "Median": [result["median1"], result["median2"]],
+        })
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (dv, group, alpha, alternative),
+            "result": result,
+            "group_stats": group_stats,
+            "clean": clean,
+        }
+
+    # ── Cache invalidation ────────────────────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (dv, group, alpha, alternative):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        group_stats = cached["group_stats"]
+        clean = cached["clean"]
+
         tab_res, tab_chart = st.tabs(["Results", "Charts"])
 
         with tab_res:
@@ -55,11 +81,6 @@ def render():
             )
             st.markdown("---")
 
-            group_stats = pd.DataFrame({
-                "Group": [str(groups[0]), str(groups[1])],
-                "N": [result["n1"], result["n2"]],
-                "Median": [result["median1"], result["median2"]],
-            })
             st.dataframe(group_stats, width="stretch", hide_index=True)
 
             render_effect_size("Rank-biserial correlation", result["rank_biserial"])
@@ -129,4 +150,3 @@ All observations from both groups are **pooled and ranked** together. The test c
 #### Charts Tab
 - **Grouped box plot** -- compares the distributions of the two groups visually.
         """)
-

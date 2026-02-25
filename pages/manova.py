@@ -13,6 +13,8 @@ from charts.boxplot import grouped_boxplot
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_manova"
+
 
 def render():
     st.title("MANOVA")
@@ -50,6 +52,28 @@ def render():
             return
 
         result = manova(df, dv_cols, group, alpha=alpha)
+
+        # Precompute clean DataFrame for charts
+        clean = df[dv_cols + [group]].dropna()
+        for c in dv_cols:
+            clean[c] = pd.to_numeric(clean[c], errors="coerce")
+        clean = clean.dropna()
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (tuple(dv_cols), group, alpha),
+            "result": result,
+            "clean": clean,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (tuple(dv_cols) if dv_cols else (), group, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        clean = cached["clean"]
 
         # ── Tabs ──────────────────────────────────────────────────────────
         tab_res, tab_follow, tab_assume, tab_chart = st.tabs(
@@ -131,11 +155,6 @@ def render():
 
         # ── Charts tab ────────────────────────────────────────────────────
         with tab_chart:
-            clean = df[dv_cols + [group]].dropna()
-            for c in dv_cols:
-                clean[c] = pd.to_numeric(clean[c], errors="coerce")
-            clean = clean.dropna()
-
             for dv in dv_cols:
                 fig = grouped_boxplot(clean, dv, group)
                 st.plotly_chart(fig, width="stretch")

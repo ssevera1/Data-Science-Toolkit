@@ -132,3 +132,14 @@ def get_report_log() -> list:
 def clear_report_log() -> None:
     """Clear all entries from the report log."""
     st.session_state["report_log"] = []
+
+
+def clear_result_caches() -> None:
+    """Delete all cached page results (keys starting with '_result_').
+
+    Call this when the underlying dataset changes (e.g. new file upload,
+    data edit) so that stale results are not displayed.
+    """
+    to_delete = [k for k in st.session_state if k.startswith("_result_")]
+    for k in to_delete:
+        del st.session_state[k]

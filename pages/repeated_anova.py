@@ -11,6 +11,8 @@ from charts.barplot import group_means_bar
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_rm_anova"
+
 
 def render():
     st.title("Repeated Measures ANOVA")
@@ -46,6 +48,22 @@ def render():
         except Exception as e:
             st.error(f"Error: {str(e)}")
             return
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (dv, within, subject, alpha),
+            "result": result,
+            "clean": clean,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (dv, within, subject, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        clean = cached["clean"]
 
         tab_res, tab_assume, tab_chart = st.tabs(["Results", "Assumptions", "Charts"])
 
@@ -152,4 +170,3 @@ Data must be in **long format** -- one row per observation. Each row contains:
 - **Grouped box plot** -- compares distributions across conditions.
 - **Group means bar chart** -- visualizes mean differences between conditions.
         """)
-

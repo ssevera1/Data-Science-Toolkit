@@ -15,6 +15,8 @@ from charts.qq_plot import qq_plot
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report
 
+_CACHE_KEY = "_result_pearson"
+
 
 def render():
     st.title("Pearson Correlation")
@@ -45,6 +47,27 @@ def render():
             return
 
         result = pearson_correlation(df[var1], df[var2], alpha=alpha)
+
+        clean = df[[var1, var2]].dropna()
+        clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
+        clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
+        clean = clean.dropna()
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (var1, var2, alpha),
+            "result": result,
+            "clean": clean,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (var1, var2, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        clean = cached["clean"]
 
         tab_res, tab_assume, tab_chart = st.tabs(["Results", "Assumptions", "Charts"])
 
@@ -77,11 +100,6 @@ def render():
             )
 
         with tab_chart:
-            clean = df[[var1, var2]].dropna()
-            clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
-            clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
-            clean = clean.dropna()
-
             fig = correlation_scatter(clean, var1, var2, r_value=result["r"])
             st.plotly_chart(fig, width="stretch")
 
@@ -97,11 +115,7 @@ def render():
         )
         _include_chart = st.checkbox("Include chart in PDF", value=True, key="pear_pdf_chart")
         if _include_chart:
-            _clean = df[[var1, var2]].dropna()
-            _clean[var1] = pd.to_numeric(_clean[var1], errors="coerce")
-            _clean[var2] = pd.to_numeric(_clean[var2], errors="coerce")
-            _clean = _clean.dropna()
-            _fig = correlation_scatter(_clean, var1, var2, r_value=result["r"])
+            _fig = correlation_scatter(clean, var1, var2, r_value=result["r"])
             _log_entry["figures"] = [{"label": "Correlation Scatter", "fig_dict": _fig.to_dict()}]
         exp_col1, exp_col2 = st.columns(2)
         with exp_col1:
@@ -150,4 +164,3 @@ Pearson correlation measures the **strength and direction of the linear relation
 #### Charts Tab
 - **Scatter plot with regression line** -- visualizes the linear relationship between the two variables and the direction/strength of the correlation.
         """)
-

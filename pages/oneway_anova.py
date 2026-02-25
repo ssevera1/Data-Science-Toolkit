@@ -15,6 +15,8 @@ from charts.barplot import group_means_bar
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_anova1"
+
 
 def render():
     st.title("One-Way ANOVA")
@@ -45,6 +47,22 @@ def render():
         clean = clean.dropna()
 
         result = oneway_anova(clean, dv, group, alpha=alpha)
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (dv, group, alpha),
+            "result": result,
+            "clean": clean,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (dv, group, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        clean = cached["clean"]
 
         tab_res, tab_assume, tab_chart = st.tabs(["Results", "Assumptions", "Charts"])
 
@@ -162,4 +180,3 @@ One-way ANOVA tests whether the **means differ across three or more independent 
 - **Grouped box plot** -- compares distributions across all groups.
 - **Group means bar chart with error bars** -- visualizes mean differences between groups.
         """)
-

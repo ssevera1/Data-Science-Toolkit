@@ -11,6 +11,8 @@ from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report
 from charts.theme import apply_theme, get_chart_colors
 
+_CACHE_KEY = "_result_binomial"
+
 
 def render():
     st.title("Binomial Test")
@@ -45,6 +47,20 @@ def render():
         if "error" in result:
             st.error(result["error"])
             return
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (var, test_prop, alpha),
+            "result": result,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (var, test_prop, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
 
         tab_res, tab_chart = st.tabs(["Results", "Charts"])
 
@@ -146,4 +162,3 @@ The binomial test determines whether the **observed proportion** of a binary var
 #### Charts Tab
 - **Bar chart** -- shows the frequency (count) of each category, providing a visual summary of the distribution.
         """)
-

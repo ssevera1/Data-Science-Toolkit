@@ -3,7 +3,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from core.state import get_df, set_df, get_var_type, set_var_type, init_state
+from core.state import get_df, set_df, get_var_type, set_var_type, init_state, clear_result_caches
 from core.data_manager import load_csv, load_excel, load_from_paste, add_column, add_rows, export_csv, export_excel
 from core.constants import VARIABLE_TYPES
 
@@ -28,6 +28,7 @@ def render():
                 else:
                     success, err = load_excel(uploaded)
                 if success:
+                    clear_result_caches()
                     st.success(f"Loaded {uploaded.name} successfully!")
                     st.rerun()
                 else:
@@ -43,6 +44,7 @@ def render():
                 if pasted.strip():
                     success, err = load_from_paste(pasted)
                     if success:
+                        clear_result_caches()
                         st.success("Data loaded successfully!")
                         st.rerun()
                     else:
@@ -96,6 +98,7 @@ def render():
     # Update state if edited
     if edited_df is not None and not edited_df.equals(df):
         set_df(edited_df)
+        clear_result_caches()
         # Set types for any new columns
         for col in edited_df.columns:
             if col not in df.columns:

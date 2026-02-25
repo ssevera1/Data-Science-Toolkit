@@ -15,6 +15,8 @@ from charts.qq_plot import qq_plot
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_ind_ttest"
+
 
 def render():
     st.title("Independent Samples t-Test")
@@ -51,6 +53,33 @@ def render():
 
         result = independent_ttest(g1, g2, equal_var=equal_var, alpha=alpha)
 
+        group_stats = pd.DataFrame({
+            "Group": [str(groups[0]), str(groups[1])],
+            "N": [result["n1"], result["n2"]],
+            "Mean": [result["mean1"], result["mean2"]],
+            "SD": [result["sd1"], result["sd2"]],
+        })
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (dv, group, alpha, equal_var),
+            "result": result,
+            "group_stats": group_stats,
+            "clean": clean,
+            "groups": groups,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (dv, group, alpha, equal_var):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        group_stats = cached["group_stats"]
+        clean = cached["clean"]
+        groups = cached["groups"]
+
         tab_res, tab_assume, tab_chart = st.tabs(["Results", "Assumptions", "Charts"])
 
         with tab_res:
@@ -60,12 +89,6 @@ def render():
             st.markdown("---")
 
             st.markdown("**Group Statistics**")
-            group_stats = pd.DataFrame({
-                "Group": [str(groups[0]), str(groups[1])],
-                "N": [result["n1"], result["n2"]],
-                "Mean": [result["mean1"], result["mean2"]],
-                "SD": [result["sd1"], result["sd2"]],
-            })
             st.dataframe(group_stats, width="stretch", hide_index=True)
 
             st.markdown(f"**Mean Difference:** {result['mean_diff']:.4f} (SE = {result['se_diff']:.4f})")
@@ -156,4 +179,3 @@ The independent samples t-test compares the **means of two independent (unrelate
 #### Charts Tab
 - **Grouped box plot** -- compares the distributions of the two groups side by side.
         """)
-

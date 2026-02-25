@@ -12,6 +12,8 @@ from charts.histogram import histogram_with_normal
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report
 
+_CACHE_KEY = "_result_wilcoxon"
+
 
 def render():
     st.title("Wilcoxon Signed-Rank Test")
@@ -48,6 +50,27 @@ def render():
             st.error(result.get("detail", "Could not compute test."))
             return
 
+        clean = df[[var1, var2]].dropna()
+        clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
+        clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
+        clean = clean.dropna()
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (var1, var2, alpha, alternative),
+            "result": result,
+            "clean": clean,
+        }
+
+    # ── Cache invalidation ────────────────────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (var1, var2, alpha, alternative):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        clean = cached["clean"]
+
         tab_res, tab_chart = st.tabs(["Results", "Charts"])
 
         with tab_res:
@@ -65,11 +88,6 @@ def render():
             render_effect_size("Effect size (r)", result["r_effect"])
 
         with tab_chart:
-            clean = df[[var1, var2]].dropna()
-            clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
-            clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
-            clean = clean.dropna()
-
             c1, c2 = st.columns(2)
             with c1:
                 fig = paired_boxplot(clean, var1, var2)
@@ -143,4 +161,3 @@ The test computes the **differences** between paired observations, ranks the **a
 - **Paired box plot** -- shows both variables' distributions side by side.
 - **Histogram of differences** -- visualizes the distribution of difference scores with a normal curve overlay.
         """)
-

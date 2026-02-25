@@ -14,6 +14,8 @@ from charts.histogram import histogram_with_normal
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_lin_reg"
+
 
 def render():
     st.title("Linear Regression")
@@ -28,7 +30,7 @@ def render():
     predictors = select_multiple_variables("Predictor variables", key="lr_pred", var_type="Metric")
 
     with st.expander("Options"):
-        alpha = st.slider("Significance level (α)", 0.01, 0.10, 0.05, 0.01, key="lr_alpha")
+        alpha = st.slider("Significance level (\u03b1)", 0.01, 0.10, 0.05, 0.01, key="lr_alpha")
 
     if dv and predictors and st.button("Calculate", type="primary"):
         if dv in predictors:
@@ -41,6 +43,28 @@ def render():
             st.error(result["error"])
             return
 
+        # Extract endog before caching (model object is not serializable)
+        _endog = result["model"].model.endog.copy()
+
+        # Remove non-serializable model object from result before caching
+        result_for_cache = {k: v for k, v in result.items() if k != "model"}
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (dv, tuple(predictors), alpha),
+            "result": result_for_cache,
+            "endog": _endog,
+        }
+
+    # ── Cache invalidation ─────────────────────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (dv, tuple(predictors or []), alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        _endog = cached["endog"]
+
         tab_res, tab_assume, tab_chart = st.tabs(["Results", "Assumptions", "Charts"])
 
         with tab_res:
@@ -52,8 +76,8 @@ def render():
             st.markdown("---")
 
             cols = st.columns(4)
-            cols[0].metric("R²", f"{result['r_squared']:.4f}")
-            cols[1].metric("Adj. R²", f"{result['adj_r_squared']:.4f}")
+            cols[0].metric("R\u00b2", f"{result['r_squared']:.4f}")
+            cols[1].metric("Adj. R\u00b2", f"{result['adj_r_squared']:.4f}")
             cols[2].metric("N", result["n"])
             cols[3].metric("AIC", f"{result['aic']:.1f}")
 
@@ -77,7 +101,7 @@ def render():
                 st.plotly_chart(fig, width="stretch")
             else:
                 fig = multi_regression_actual_vs_predicted(
-                    pd.Series(result["model"].model.endog),
+                    pd.Series(_endog),
                     pd.Series(result["fitted"]),
                 )
                 st.plotly_chart(fig, width="stretch")
@@ -114,7 +138,7 @@ def render():
                 _figures.append({"label": "Regression Scatter", "fig_dict": _sfig.to_dict()})
             else:
                 _avp = multi_regression_actual_vs_predicted(
-                    pd.Series(result["model"].model.endog),
+                    pd.Series(_endog),
                     pd.Series(result["fitted"]),
                 )
                 _figures.append({"label": "Actual vs Predicted", "fig_dict": _avp.to_dict()})
@@ -168,4 +192,3 @@ Linear regression predicts a **continuous outcome** (dependent variable) from on
 - **Q-Q plot of residuals** -- points should follow the diagonal if residuals are normally distributed.
 - **Histogram of residuals** -- visualizes the distribution of residuals with a normal curve overlay.
         """)
-

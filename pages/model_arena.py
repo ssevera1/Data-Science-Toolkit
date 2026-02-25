@@ -9,6 +9,8 @@ from core.state import log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 from core.data_manager import sanitize_csv as _sanitize_csv
 
+_CACHE_KEY = "_result_model_arena"
+
 
 def _guard():
     if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
@@ -241,24 +243,12 @@ def render():
         progress.progress(1.0)
         status.write("Benchmark complete!")
 
-        # ── Results ────────────────────────────────────────────────────────────
+        # ── Store results in cache ─────────────────────────────────────────────
         if results:
             res_df = pd.DataFrame(results)
             st.session_state["arena_results"] = res_df
 
-            # Highlight best
-            st.subheader("Results")
-            st.dataframe(res_df, width="stretch", hide_index=True)
-
-            csv_data = _sanitize_csv(res_df).to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "Download Results CSV",
-                data=csv_data,
-                file_name="model_arena_results.csv",
-                mime="text/csv",
-            )
-
-            # Primary metric chart
+            # Determine primary metric
             if task == "Classification" and is_binary:
                 primary = "Roc Auc"
             elif task == "Classification":
@@ -266,93 +256,144 @@ def render():
             else:
                 primary = "R2"
 
+            # Store best model info for other tools
             if primary in res_df.columns:
                 valid = res_df.dropna(subset=[primary]).sort_values(primary, ascending=False)
-                fig = px.bar(valid, x="Model", y=primary, color=primary,
-                             color_continuous_scale="Viridis", text_auto=".4f",
-                             title=f"Model Comparison — {primary}")
-                fig.update_layout(height=450)
-                st.plotly_chart(fig, width="stretch")
+                if not valid.empty:
+                    st.session_state["best_model_name"] = valid.iloc[0]["Model"]
+                    st.session_state["model_map_task"] = task
+                    st.session_state["model_X"] = X
+                    st.session_state["model_y"] = y_enc
+                    st.session_state["feature_cols"] = feature_cols
 
-                best = valid.iloc[0]
-                st.success(f"Best model: **{best['Model']}** with {primary} = {best[primary]:.4f}")
+            st.session_state[_CACHE_KEY] = {
+                "inputs": (
+                    target,
+                    task,
+                    cv_folds,
+                    tuple(selected_models),
+                    tuple(feature_cols),
+                    is_binary,
+                ),
+                "res_df": res_df,
+                "task": task,
+                "is_binary": is_binary,
+                "primary": primary,
+            }
 
-                # Radar chart for classification
-                if task == "Classification" and len(valid) > 1:
-                    if is_binary:
-                        metrics = ["Accuracy", "F1", "Precision", "Recall", "Roc Auc"]
-                    else:
-                        metrics = ["Accuracy", "F1 Weighted", "Precision Weighted", "Recall Weighted"]
-                    avail_metrics = [m for m in metrics if m in valid.columns]
-                    if len(avail_metrics) >= 3:
-                        fig = go.Figure()
-                        for _, row in valid.head(5).iterrows():
-                            values = [row.get(m, 0) for m in avail_metrics]
-                            values.append(values[0])  # close the polygon
-                            fig.add_trace(go.Scatterpolar(
-                                r=values,
-                                theta=avail_metrics + [avail_metrics[0]],
-                                name=row["Model"],
-                            ))
-                        fig.update_layout(
-                            polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-                            height=500,
-                            title="Top 5 Models — Radar Chart",
-                        )
-                        st.plotly_chart(fig, width="stretch")
+    # ── Invalidate cache if inputs changed ─────────────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (
+        target,
+        task,
+        cv_folds,
+        tuple(selected_models),
+        tuple(feature_cols),
+        is_binary,
+    ):
+        del st.session_state[_CACHE_KEY]
+        cached = None
 
-                # Store best model info
-                st.session_state["best_model_name"] = valid.iloc[0]["Model"]
-                st.session_state["model_map_task"] = task
-                st.session_state["model_X"] = X
-                st.session_state["model_y"] = y_enc
-                st.session_state["feature_cols"] = feature_cols
+    # ── Render from cache ──────────────────────────────────────────────────────
+    if cached:
+        res_df = cached["res_df"]
+        _task = cached["task"]
+        _is_binary = cached["is_binary"]
+        primary = cached["primary"]
 
-            # ── PDF Export ─────────────────────────────────────────────
-            st.divider()
-            _has_primary = primary in res_df.columns and not res_df.dropna(subset=[primary]).empty
-            _best_name = res_df.dropna(subset=[primary]).iloc[0]["Model"] if _has_primary else (res_df.iloc[0]["Model"] if len(res_df) > 0 else "N/A")
-            _best_score = res_df.dropna(subset=[primary]).iloc[0][primary] if _has_primary else None
-            _log_entry = build_log_entry(
-                entry_type="model_arena",
-                title=f"Model Arena: {target} ({task})",
-                result={
-                    "task": task,
-                    "best_model": _best_name,
-                    "primary_metric": primary,
-                    "best_score": _best_score,
-                    "n_models": len(selected_models),
-                    "cv_folds": cv_folds,
-                },
-                tables=[_serialize_df(res_df, "Benchmark Results")],
-                variables={"target": target, "task": task, "cv_folds": str(cv_folds)},
-                dataset_name=st.session_state.get("file_name", ""),
+        # Highlight best
+        st.subheader("Results")
+        st.dataframe(res_df, width="stretch", hide_index=True)
+
+        csv_data = _sanitize_csv(res_df).to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "Download Results CSV",
+            data=csv_data,
+            file_name="model_arena_results.csv",
+            mime="text/csv",
+        )
+
+        # Primary metric chart
+        if primary in res_df.columns:
+            valid = res_df.dropna(subset=[primary]).sort_values(primary, ascending=False)
+            fig = px.bar(valid, x="Model", y=primary, color=primary,
+                         color_continuous_scale="Viridis", text_auto=".4f",
+                         title=f"Model Comparison — {primary}")
+            fig.update_layout(height=450)
+            st.plotly_chart(fig, width="stretch")
+
+            best = valid.iloc[0]
+            st.success(f"Best model: **{best['Model']}** with {primary} = {best[primary]:.4f}")
+
+            # Radar chart for classification
+            if _task == "Classification" and len(valid) > 1:
+                if _is_binary:
+                    metrics = ["Accuracy", "F1", "Precision", "Recall", "Roc Auc"]
+                else:
+                    metrics = ["Accuracy", "F1 Weighted", "Precision Weighted", "Recall Weighted"]
+                avail_metrics = [m for m in metrics if m in valid.columns]
+                if len(avail_metrics) >= 3:
+                    fig = go.Figure()
+                    for _, row in valid.head(5).iterrows():
+                        values = [row.get(m, 0) for m in avail_metrics]
+                        values.append(values[0])  # close the polygon
+                        fig.add_trace(go.Scatterpolar(
+                            r=values,
+                            theta=avail_metrics + [avail_metrics[0]],
+                            name=row["Model"],
+                        ))
+                    fig.update_layout(
+                        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                        height=500,
+                        title="Top 5 Models — Radar Chart",
+                    )
+                    st.plotly_chart(fig, width="stretch")
+
+        # ── PDF Export ─────────────────────────────────────────────
+        st.divider()
+        _has_primary = primary in res_df.columns and not res_df.dropna(subset=[primary]).empty
+        _best_name = res_df.dropna(subset=[primary]).iloc[0]["Model"] if _has_primary else (res_df.iloc[0]["Model"] if len(res_df) > 0 else "N/A")
+        _best_score = res_df.dropna(subset=[primary]).iloc[0][primary] if _has_primary else None
+        _log_entry = build_log_entry(
+            entry_type="model_arena",
+            title=f"Model Arena: {target} ({_task})",
+            result={
+                "task": _task,
+                "best_model": _best_name,
+                "primary_metric": primary,
+                "best_score": _best_score,
+                "n_models": len(selected_models),
+                "cv_folds": cv_folds,
+            },
+            tables=[_serialize_df(res_df, "Benchmark Results")],
+            variables={"target": target, "task": _task, "cv_folds": str(cv_folds)},
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include charts in PDF", value=True, key="arena_pdf_chart")
+        if _include_chart and _has_primary:
+            _figures = []
+            _valid = res_df.dropna(subset=[primary]).sort_values(primary, ascending=False)
+            if not _valid.empty:
+                _bar = px.bar(_valid, x="Model", y=primary, color=primary,
+                              color_continuous_scale="Viridis", text_auto=".4f",
+                              title=f"Model Comparison -- {primary}")
+                _bar.update_layout(height=450)
+                _figures.append({"label": f"Model Comparison ({primary})", "fig_dict": _bar.to_dict()})
+            _log_entry["figures"] = _figures
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="arena_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="model_arena.pdf",
+                mime="application/pdf",
             )
-            _include_chart = st.checkbox("Include charts in PDF", value=True, key="arena_pdf_chart")
-            if _include_chart and _has_primary:
-                _figures = []
-                _valid = res_df.dropna(subset=[primary]).sort_values(primary, ascending=False)
-                if not _valid.empty:
-                    _bar = px.bar(_valid, x="Model", y=primary, color=primary,
-                                  color_continuous_scale="Viridis", text_auto=".4f",
-                                  title=f"Model Comparison -- {primary}")
-                    _bar.update_layout(height=450)
-                    _figures.append({"label": f"Model Comparison ({primary})", "fig_dict": _bar.to_dict()})
-                _log_entry["figures"] = _figures
-            exp_col1, exp_col2 = st.columns(2)
-            with exp_col1:
-                if st.button("Add to Report", key="arena_add_report"):
-                    if log_result(_log_entry):
-                        st.success("Added to report log.")
-                    else:
-                        st.error("Report log is full (100 entries). Clear it first.")
-            with exp_col2:
-                st.download_button(
-                    "Export PDF",
-                    data=generate_single_report(_log_entry, include_charts=_include_chart),
-                    file_name="model_arena.pdf",
-                    mime="application/pdf",
-                )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

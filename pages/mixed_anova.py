@@ -9,6 +9,8 @@ from charts.barplot import two_way_bar
 from core.state import get_df, log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 
+_CACHE_KEY = "_result_mix_anova"
+
 
 def render():
     st.title("Mixed ANOVA")
@@ -40,6 +42,22 @@ def render():
         except Exception as e:
             st.error(f"Error: {str(e)}")
             return
+
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (dv, within, between, subject, alpha),
+            "result": result,
+            "clean": clean,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached["inputs"] != (dv, within, between, subject, alpha):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    if cached:
+        result = cached["result"]
+        clean = cached["clean"]
 
         tab_res, tab_chart = st.tabs(["Results", "Charts"])
 
@@ -122,4 +140,3 @@ Mixed ANOVA tests the effects of **one within-subjects factor** and **one betwee
 #### Charts Tab
 - **Two-way bar chart** -- shows means broken down by both the within-subjects and between-subjects factors, helping visualize main effects and interactions.
         """)
-

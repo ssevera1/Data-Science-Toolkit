@@ -1,10 +1,15 @@
+import json
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from utils.theme import page_header
+from core.state import log_result
+from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 from core.data_manager import sanitize_csv as _sanitize_csv
+
+_CACHE_KEY = "_result_hp_tuning"
 
 
 def _guard():
@@ -188,59 +193,102 @@ def render():
         study.optimize(objective, n_trials=n_trials, callbacks=[callback])
         progress.progress(1.0)
 
-        # ── Results ────────────────────────────────────────────────────────────
-        st.subheader("Results")
-        display_metric = primary_metric.replace("neg_", "").replace("_", " ").title()
-        best_display = -study.best_value if primary_metric.startswith("neg_") else study.best_value
-        st.success(f"Best {display_metric}: **{best_display:.4f}**")
-
-        st.markdown("#### Best Hyperparameters")
+        # Compute results
         best_params = study.best_params
-        st.json(best_params)
+        best_value = float(study.best_value)
+        display_metric = primary_metric.replace("neg_", "").replace("_", " ").title()
+        best_display = -best_value if primary_metric.startswith("neg_") else best_value
 
-        # Optimization history
-        st.markdown("#### Optimization History")
-        hist_df = pd.DataFrame(trial_history)
-        hist_df["best_so_far"] = hist_df["score"].cummax()
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=hist_df["trial"], y=hist_df["score"],
-                                 mode="markers", name="Trial Score", opacity=0.5))
-        fig.add_trace(go.Scatter(x=hist_df["trial"], y=hist_df["best_so_far"],
-                                 mode="lines", name="Best So Far",
-                                 line=dict(color="red", width=2)))
-        fig.update_layout(height=400, xaxis_title="Trial", yaxis_title=primary_metric.title())
-        st.plotly_chart(fig, width="stretch")
-
-        # Parameter importance
-        st.markdown("#### Parameter Importance")
+        # Compute parameter importance while study is available
         try:
             importance = optuna.importance.get_param_importances(study)
             imp_df = pd.DataFrame({
                 "Parameter": list(importance.keys()),
                 "Importance": list(importance.values()),
             })
-            fig = px.bar(imp_df, x="Importance", y="Parameter", orientation="h",
-                         color="Importance", color_continuous_scale="Viridis")
-            fig.update_layout(height=400, yaxis=dict(autorange="reversed"))
-            st.plotly_chart(fig, width="stretch")
         except Exception:
+            imp_df = None
+
+        # Store best params in session state
+        st.session_state["best_params"] = best_params
+        st.session_state["tuned_model"] = model_choice
+
+        # Cache everything needed for rendering
+        st.session_state[_CACHE_KEY] = {
+            "inputs": (target, task, model_choice, n_trials, cv_folds, primary_metric),
+            "best_params": best_params,
+            "best_value": best_value,
+            "trial_history": trial_history,
+            "primary_metric": primary_metric,
+            "task": task,
+            "model_choice": model_choice,
+            "display_metric": display_metric,
+            "best_display": best_display,
+            "imp_df": imp_df,
+        }
+
+    # ── Invalidate cache if inputs changed ─────────────────────────────────────
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached.get("inputs") != (target, task, model_choice, n_trials, cv_folds, primary_metric):
+        del st.session_state[_CACHE_KEY]
+        cached = None
+
+    # ── Render from cache ──────────────────────────────────────────────────────
+    if cached:
+        _best_params = cached["best_params"]
+        _best_value = cached["best_value"]
+        _trial_history = cached["trial_history"]
+        _primary_metric = cached["primary_metric"]
+        _task = cached["task"]
+        _model_choice = cached["model_choice"]
+        _display_metric = cached["display_metric"]
+        _best_display = cached["best_display"]
+        _imp_df = cached["imp_df"]
+
+        st.subheader("Results")
+        st.success(f"Best {_display_metric}: **{_best_display:.4f}**")
+
+        st.markdown("#### Best Hyperparameters")
+        st.json(_best_params)
+
+        # Optimization history
+        st.markdown("#### Optimization History")
+        hist_df = pd.DataFrame(_trial_history)
+        hist_df["best_so_far"] = hist_df["score"].cummax()
+        hist_fig = go.Figure()
+        hist_fig.add_trace(go.Scatter(x=hist_df["trial"], y=hist_df["score"],
+                                 mode="markers", name="Trial Score", opacity=0.5))
+        hist_fig.add_trace(go.Scatter(x=hist_df["trial"], y=hist_df["best_so_far"],
+                                 mode="lines", name="Best So Far",
+                                 line=dict(color="red", width=2)))
+        hist_fig.update_layout(height=400, xaxis_title="Trial", yaxis_title=_primary_metric.title())
+        st.plotly_chart(hist_fig, width="stretch")
+
+        # Parameter importance
+        st.markdown("#### Parameter Importance")
+        if _imp_df is not None:
+            fig_imp = px.bar(_imp_df, x="Importance", y="Parameter", orientation="h",
+                         color="Importance", color_continuous_scale="Viridis")
+            fig_imp.update_layout(height=400, yaxis=dict(autorange="reversed"))
+            st.plotly_chart(fig_imp, width="stretch")
+        else:
             st.info("Parameter importance not available for this study.")
 
         # Parallel coordinate plot
         st.markdown("#### Parallel Coordinate Plot")
         try:
-            params_df = pd.DataFrame([t["params"] for t in trial_history])
-            params_df["score"] = [t["score"] for t in trial_history]
+            params_df = pd.DataFrame([t["params"] for t in _trial_history])
+            params_df["score"] = [t["score"] for t in _trial_history]
 
             numeric_params = params_df.select_dtypes(include="number").columns.tolist()
             if len(numeric_params) >= 2:
-                fig = px.parallel_coordinates(
+                fig_pc = px.parallel_coordinates(
                     params_df[numeric_params],
                     color="score",
                     color_continuous_scale="Viridis",
                 )
-                fig.update_layout(height=500)
-                st.plotly_chart(fig, width="stretch")
+                fig_pc.update_layout(height=500)
+                st.plotly_chart(fig_pc, width="stretch")
         except Exception:
             pass
 
@@ -257,8 +305,7 @@ def render():
                 width="stretch",
             )
         with dl2:
-            import json
-            params_json = json.dumps(best_params, indent=2).encode("utf-8")
+            params_json = json.dumps(_best_params, indent=2).encode("utf-8")
             st.download_button(
                 "Download Best Params JSON",
                 data=params_json,
@@ -267,9 +314,46 @@ def render():
                 width="stretch",
             )
 
-        # Store best params
-        st.session_state["best_params"] = best_params
-        st.session_state["tuned_model"] = model_choice
+        # ── PDF Export ─────────────────────────────────────────────
+        st.divider()
+        _tables = [_serialize_df(hist_df.drop(columns=["params"], errors="ignore"), "Trial History")]
+        if _imp_df is not None:
+            _tables.append(_serialize_df(_imp_df, "Parameter Importance"))
+        _log_entry = build_log_entry(
+            entry_type="hyperparameter_tuning",
+            title=f"Hyperparameter Tuning: {_model_choice}",
+            result={
+                "model": _model_choice,
+                "task": _task,
+                "metric": _display_metric,
+                "best_score": _best_display,
+                "n_trials": len(_trial_history),
+                "cv_folds": cv_folds,
+                "best_params": _best_params,
+            },
+            tables=_tables,
+            variables={"target": target, "model": _model_choice, "task": _task},
+            dataset_name=st.session_state.get("file_name", ""),
+        )
+        _include_chart = st.checkbox("Include charts in PDF", value=True, key="hp_pdf_chart")
+        if _include_chart:
+            _log_entry["figures"] = [
+                {"label": "Optimization History", "fig_dict": hist_fig.to_dict()},
+            ]
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            if st.button("Add to Report", key="hp_add_report"):
+                if log_result(_log_entry):
+                    st.success("Added to report log.")
+                else:
+                    st.error("Report log is full (100 entries). Clear it first.")
+        with exp_col2:
+            st.download_button(
+                "Export PDF",
+                data=generate_single_report(_log_entry, include_charts=_include_chart),
+                file_name="hyperparameter_tuning.pdf",
+                mime="application/pdf",
+            )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

@@ -7,6 +7,8 @@ from core.state import log_result
 from utils.pdf_export import build_log_entry, generate_single_report, _serialize_df
 from core.data_manager import sanitize_csv as _sanitize_csv
 
+_CACHE_KEY = "_result_feat_sel"
+
 
 def _guard():
     if "df" not in st.session_state or st.session_state["df"].dropna(how="all").empty:
@@ -59,6 +61,13 @@ def render():
         y = pd.Series(le.fit_transform(df[target_col]), name=target_col)
     else:
         y = df[target_col].fillna(0)
+
+    # ── Cache invalidation ────────────────────────────────────────────────
+    _fingerprint = (target_col, task, tuple(feature_cols))
+    cached = st.session_state.get(_CACHE_KEY)
+    if cached and cached.get("inputs") != _fingerprint:
+        del st.session_state[_CACHE_KEY]
+        cached = None
 
     tab_corr, tab_mi, tab_var, tab_rfe, tab_summary = st.tabs(
         ["Correlation Filter", "Mutual Information", "Variance Threshold", "RFE", "Summary"]
@@ -127,7 +136,8 @@ def render():
 
         n_select = st.slider("Features to select", 1, len(feature_cols), max(1, len(feature_cols) // 2))
 
-        if st.button("Run RFE"):
+        _rfe_clicked = st.button("Run RFE")
+        if _rfe_clicked:
             with st.spinner("Running RFE..."):
                 if task == "Classification":
                     estimator = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=-1)
@@ -143,10 +153,30 @@ def render():
                     "Selected": rfe.support_,
                 }).sort_values("Ranking")
 
-                results["RFE Rank"] = rfe_df.set_index("Feature")["Ranking"]
+                rfe_ranking = rfe_df.set_index("Feature")["Ranking"]
+                selected = rfe_df[rfe_df["Selected"]]["Feature"].tolist()
+
+                # Store RFE results in cache
+                st.session_state[_CACHE_KEY] = {
+                    "inputs": _fingerprint,
+                    "rfe_ranking": rfe_ranking,
+                    "rfe_df": rfe_df,
+                    "rfe_selected": selected,
+                }
+
+                results["RFE Rank"] = rfe_ranking
 
                 st.dataframe(rfe_df, width="stretch", hide_index=True)
-                selected = rfe_df[rfe_df["Selected"]]["Feature"].tolist()
+                st.success(f"Selected features: {selected}")
+
+        # Restore RFE results from cache on rerun (when button was not just clicked)
+        if not _rfe_clicked:
+            cached = st.session_state.get(_CACHE_KEY)
+            if cached and cached.get("inputs") == _fingerprint and "rfe_ranking" in cached:
+                results["RFE Rank"] = cached["rfe_ranking"]
+                rfe_df = cached["rfe_df"]
+                selected = cached["rfe_selected"]
+                st.dataframe(rfe_df, width="stretch", hide_index=True)
                 st.success(f"Selected features: {selected}")
 
     # ── Summary ────────────────────────────────────────────────────────────────
