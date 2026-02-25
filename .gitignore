@@ -35,6 +35,7 @@ credentials.json
 
 # Claude
 .claude/
+CLAUDE.md
 
 # Original app subdirectories
 DS_App/

@@ -977,7 +977,7 @@ def generate_single_report(entry: dict, include_charts: bool = True) -> bytes:
     renderer = _RENDERERS.get(entry.get("entry_type", ""), _render_fallback)
     renderer(pdf, entry, include_charts)
 
-    return pdf.output()
+    return bytes(pdf.output())
 
 
 def generate_full_report(
@@ -1018,4 +1018,4 @@ def generate_full_report(
         renderer = _RENDERERS.get(entry.get("entry_type", ""), _render_fallback)
         renderer(pdf, entry, include_charts)
 
-    return pdf.output()
+    return bytes(pdf.output())
