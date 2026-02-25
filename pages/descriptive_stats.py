@@ -116,6 +116,8 @@ def render():
                 if len(_s) > 0:
                     _hfig = histogram_with_normal(_s, _mv)
                     _figures.append({"label": f"Histogram: {_mv}", "fig_dict": _hfig.to_dict()})
+                    _bfig = single_boxplot(_s, _mv)
+                    _figures.append({"label": f"Box Plot: {_mv}", "fig_dict": _bfig.to_dict()})
             _log_entry["figures"] = _figures
         exp_col1, exp_col2 = st.columns(2)
         with exp_col1:

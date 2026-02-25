@@ -216,6 +216,11 @@ def render():
                     title=f"Actual vs Predicted: {_m['dv']}",
                 )
                 _figures.append({"label": f"Actual vs Predicted: {_m['dv']}", "fig_dict": _avp.to_dict()})
+                _qqfig = qq_plot(
+                    pd.Series(_m["residuals"]),
+                    f"Residuals ({_m['dv']})",
+                )
+                _figures.append({"label": f"Q-Q Plot: {_m['dv']}", "fig_dict": _qqfig.to_dict()})
             _log_entry["figures"] = _figures
         exp_col1, exp_col2 = st.columns(2)
         with exp_col1:

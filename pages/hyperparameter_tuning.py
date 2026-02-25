@@ -276,19 +276,20 @@ def render():
 
         # Parallel coordinate plot
         st.markdown("#### Parallel Coordinate Plot")
+        _pc_fig = None
         try:
             params_df = pd.DataFrame([t["params"] for t in _trial_history])
             params_df["score"] = [t["score"] for t in _trial_history]
 
             numeric_params = params_df.select_dtypes(include="number").columns.tolist()
             if len(numeric_params) >= 2:
-                fig_pc = px.parallel_coordinates(
+                _pc_fig = px.parallel_coordinates(
                     params_df[numeric_params],
                     color="score",
                     color_continuous_scale="Viridis",
                 )
-                fig_pc.update_layout(height=500)
-                st.plotly_chart(fig_pc, width="stretch")
+                _pc_fig.update_layout(height=500)
+                st.plotly_chart(_pc_fig, width="stretch")
         except Exception:
             pass
 
@@ -343,6 +344,8 @@ def render():
                                   color="Importance", color_continuous_scale="Viridis")
                 _imp_fig.update_layout(height=400, yaxis=dict(autorange="reversed"))
                 _hp_figures.append({"label": "Parameter Importance", "fig_dict": _imp_fig.to_dict()})
+            if _pc_fig is not None:
+                _hp_figures.append({"label": "Parallel Coordinate Plot", "fig_dict": _pc_fig.to_dict()})
             _log_entry["figures"] = _hp_figures
         exp_col1, exp_col2 = st.columns(2)
         with exp_col1:

@@ -164,12 +164,14 @@ def render():
                     "Importance Std": result.importances_std,
                 }).sort_values("Importance Mean", ascending=False)
 
-                fig = px.bar(perm_df, x="Importance Mean", y="Feature", orientation="h",
+                perm_fig = px.bar(perm_df, x="Importance Mean", y="Feature", orientation="h",
                              error_x="Importance Std",
                              color="Importance Mean", color_continuous_scale="Plasma")
-                fig.update_layout(height=max(400, len(feature_cols) * 25),
+                perm_fig.update_layout(height=max(400, len(feature_cols) * 25),
                                   yaxis=dict(autorange="reversed"))
-                st.plotly_chart(fig, width="stretch")
+                st.plotly_chart(perm_fig, width="stretch")
+                # Cache for PDF export
+                st.session_state["_exp_perm_fig"] = perm_fig.to_dict()
 
     # ── SHAP ───────────────────────────────────────────────────────────────────
     with tab_shap:
@@ -214,11 +216,13 @@ def render():
                     "Mean |SHAP|": mean_abs_shap,
                 }).sort_values("Mean |SHAP|", ascending=False)
 
-                fig = px.bar(shap_df, x="Mean |SHAP|", y="Feature", orientation="h",
+                shap_fig = px.bar(shap_df, x="Mean |SHAP|", y="Feature", orientation="h",
                              color="Mean |SHAP|", color_continuous_scale="Reds")
-                fig.update_layout(height=max(400, len(feature_cols) * 25),
+                shap_fig.update_layout(height=max(400, len(feature_cols) * 25),
                                   yaxis=dict(autorange="reversed"))
-                st.plotly_chart(fig, width="stretch")
+                st.plotly_chart(shap_fig, width="stretch")
+                # Cache for PDF export
+                st.session_state["_exp_shap_fig"] = shap_fig.to_dict()
 
                 shap_csv = _sanitize_csv(shap_df).to_csv(index=False).encode("utf-8")
                 st.download_button(
@@ -336,10 +340,16 @@ def render():
     )
 
     _include_chart = st.checkbox("Include charts in PDF", value=True, key="exp_pdf_chart")
-    if _include_chart and imp_fig is not None:
-        _log_entry["figures"] = [
-            {"label": "Feature Importance", "fig_dict": imp_fig.to_dict()},
-        ]
+    if _include_chart:
+        _exp_figures = []
+        if imp_fig is not None:
+            _exp_figures.append({"label": "Feature Importance", "fig_dict": imp_fig.to_dict()})
+        if "_exp_perm_fig" in st.session_state:
+            _exp_figures.append({"label": "Permutation Importance", "fig_dict": st.session_state["_exp_perm_fig"]})
+        if "_exp_shap_fig" in st.session_state:
+            _exp_figures.append({"label": "SHAP Feature Importance", "fig_dict": st.session_state["_exp_shap_fig"]})
+        if _exp_figures:
+            _log_entry["figures"] = _exp_figures
 
     _exp_col1, _exp_col2 = st.columns(2)
     with _exp_col1:

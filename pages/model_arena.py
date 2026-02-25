@@ -379,6 +379,29 @@ def render():
                               title=f"Model Comparison -- {primary}")
                 _bar.update_layout(height=450)
                 _figures.append({"label": f"Model Comparison ({primary})", "fig_dict": _bar.to_dict()})
+                # Radar chart for classification
+                if _task == "Classification" and len(_valid) > 1:
+                    if _is_binary:
+                        _radar_metrics = ["Accuracy", "F1", "Precision", "Recall", "Roc Auc"]
+                    else:
+                        _radar_metrics = ["Accuracy", "F1 Weighted", "Precision Weighted", "Recall Weighted"]
+                    _avail_metrics = [m for m in _radar_metrics if m in _valid.columns]
+                    if len(_avail_metrics) >= 3:
+                        _rfig = go.Figure()
+                        for _, _row in _valid.head(5).iterrows():
+                            _vals = [_row.get(m, 0) for m in _avail_metrics]
+                            _vals.append(_vals[0])
+                            _rfig.add_trace(go.Scatterpolar(
+                                r=_vals,
+                                theta=_avail_metrics + [_avail_metrics[0]],
+                                name=_row["Model"],
+                            ))
+                        _rfig.update_layout(
+                            polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                            height=500,
+                            title="Top 5 Models -- Radar Chart",
+                        )
+                        _figures.append({"label": "Radar Chart (Top 5)", "fig_dict": _rfig.to_dict()})
             _log_entry["figures"] = _figures
         exp_col1, exp_col2 = st.columns(2)
         with exp_col1:

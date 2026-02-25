@@ -97,6 +97,40 @@ def render():
                                 color_continuous_scale="Reds", text_auto=".1f")
         miss_chart_fig.update_layout(height=400)
 
+    # Missing value pattern heatmap (pre-computed for tab + PDF)
+    miss_pattern_fig = None
+    if len(miss) > 0:
+        sample = df[miss.index].head(200)
+        miss_pattern_fig = px.imshow(
+            sample.isnull().astype(int),
+            color_continuous_scale=[get_colors()["bg_primary"], get_colors()["error"]],
+            aspect="auto",
+            labels=dict(color="Missing"),
+        )
+        miss_pattern_fig.update_layout(height=400)
+
+    # Numeric distribution histograms (pre-computed for PDF; first 6 columns)
+    num_dist_fig = None
+    if num_cols:
+        _pdf_num = num_cols[:6]
+        _ncols = min(3, len(_pdf_num))
+        _nrows = (len(_pdf_num) + _ncols - 1) // _ncols
+        num_dist_fig = make_subplots(rows=_nrows, cols=_ncols, subplot_titles=_pdf_num)
+        for _i, _col in enumerate(_pdf_num):
+            _r, _c = divmod(_i, _ncols)
+            num_dist_fig.add_trace(
+                go.Histogram(x=df[_col].dropna(), name=_col, showlegend=False),
+                row=_r + 1, col=_c + 1,
+            )
+        num_dist_fig.update_layout(height=300 * _nrows)
+
+    # Box plots (pre-computed for PDF; first 6 numeric columns)
+    box_fig = None
+    if num_cols:
+        _box_cols = num_cols[:6]
+        box_fig = px.box(df[_box_cols].melt(), x="variable", y="value", color="variable")
+        box_fig.update_layout(height=500, showlegend=False)
+
     tab_overview, tab_dist, tab_corr, tab_missing, tab_outliers = st.tabs(
         ["Overview", "Distributions", "Correlations", "Missing Values", "Outliers"]
     )
@@ -199,15 +233,7 @@ def render():
 
             # Missing value heatmap (sample if large)
             st.markdown("#### Missing Value Pattern")
-            sample = df[miss.index].head(200)
-            fig = px.imshow(
-                sample.isnull().astype(int),
-                color_continuous_scale=[get_colors()["bg_primary"], get_colors()["error"]],
-                aspect="auto",
-                labels=dict(color="Missing"),
-            )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(miss_pattern_fig, width="stretch")
 
     # ── Outliers ───────────────────────────────────────────────────────────────
     with tab_outliers:
@@ -275,10 +301,16 @@ def render():
     _include_chart = st.checkbox("Include charts in PDF", value=True, key="prof_pdf_chart")
     if _include_chart:
         _figures = [{"label": "Column Types", "fig_dict": type_chart_fig.to_dict()}]
+        if num_dist_fig is not None:
+            _figures.append({"label": "Numeric Distributions", "fig_dict": num_dist_fig.to_dict()})
         if corr_heatmap_fig is not None:
             _figures.append({"label": "Correlation Matrix (Pearson)", "fig_dict": corr_heatmap_fig.to_dict()})
         if miss_chart_fig is not None:
             _figures.append({"label": "Missing Values", "fig_dict": miss_chart_fig.to_dict()})
+        if miss_pattern_fig is not None:
+            _figures.append({"label": "Missing Value Pattern", "fig_dict": miss_pattern_fig.to_dict()})
+        if box_fig is not None:
+            _figures.append({"label": "Box Plots (Outliers)", "fig_dict": box_fig.to_dict()})
         _log_entry["figures"] = _figures
 
     exp_col1, exp_col2 = st.columns(2)

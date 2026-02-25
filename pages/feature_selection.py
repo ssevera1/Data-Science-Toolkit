@@ -265,6 +265,14 @@ def render():
                     _mfig.update_layout(height=max(400, len(feature_cols) * 25),
                                         yaxis=dict(autorange="reversed"))
                     _figures.append({"label": "Mutual Information", "fig_dict": _mfig.to_dict()})
+                if "Variance" in results:
+                    _var_df = pd.DataFrame({"Feature": results["Variance"].index,
+                                            "Variance": results["Variance"].values})
+                    _vfig = px.bar(_var_df, x="Variance", y="Feature", orientation="h",
+                                   color="Variance", color_continuous_scale="Cividis")
+                    _vfig.update_layout(height=max(400, len(feature_cols) * 25),
+                                        yaxis=dict(autorange="reversed"))
+                    _figures.append({"label": "Variance Threshold", "fig_dict": _vfig.to_dict()})
                 _log_entry["figures"] = _figures
             exp_col1, exp_col2 = st.columns(2)
             with exp_col1:

@@ -144,6 +144,8 @@ def render():
                 _figures.append({"label": "Actual vs Predicted", "fig_dict": _avp.to_dict()})
             _qfig = qq_plot(pd.Series(result["residuals"]), "Residuals")
             _figures.append({"label": "Q-Q Plot (Residuals)", "fig_dict": _qfig.to_dict()})
+            _hfig = histogram_with_normal(pd.Series(result["residuals"]), "Residuals")
+            _figures.append({"label": "Histogram (Residuals)", "fig_dict": _hfig.to_dict()})
             _log_entry["figures"] = _figures
         exp_col1, exp_col2 = st.columns(2)
         with exp_col1:
