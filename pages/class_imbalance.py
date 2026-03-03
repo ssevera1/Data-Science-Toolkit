@@ -68,6 +68,61 @@ def _apply_tomek_links(result_df, target_col, feature_cols, n_original):
     return result_df, result_df[target_col]
 
 
+def _gower_undersample(df, target, all_feature_cols, random_state=42):
+    """Boundary-preserving undersampling using Gower distance.
+
+    Keeps majority samples closest to the minority class boundary,
+    measured by average Gower distance to k-nearest minority neighbors.
+    Works natively on mixed numeric + categorical features.
+    """
+    import gower
+
+    y = df[target]
+    class_counts = y.value_counts()
+    min_count = class_counts.min()
+    minority_class = class_counts.idxmin()
+
+    minority_mask = y == minority_class
+    minority_df = df.loc[minority_mask, all_feature_cols]
+
+    keep_indices = list(df.index[minority_mask])
+
+    for cls in class_counts.index:
+        if cls == minority_class:
+            continue
+        cls_mask = y == cls
+        cls_count = class_counts[cls]
+
+        if cls_count <= min_count:
+            keep_indices.extend(df.index[cls_mask])
+            continue
+
+        cls_df = df.loc[cls_mask, all_feature_cols]
+        cls_indices = df.index[cls_mask]
+
+        # Compute Gower distance: each majority sample vs all minority samples
+        dist_matrix = gower.gower_matrix(cls_df, minority_df)
+
+        # Average distance to k-nearest minority neighbors
+        k = min(5, len(minority_df))
+        if k < len(minority_df):
+            # Partial sort for k smallest distances per row
+            partitioned = np.partition(dist_matrix, k, axis=1)[:, :k]
+            avg_dist = partitioned.mean(axis=1)
+        else:
+            avg_dist = dist_matrix.mean(axis=1)
+
+        # Keep the min_count samples closest to the boundary
+        rng = np.random.RandomState(random_state)
+        # Break ties randomly by adding tiny jitter
+        jitter = rng.uniform(0, 1e-10, size=len(avg_dist))
+        closest_idx = np.argsort(avg_dist + jitter)[:min_count]
+        keep_indices.extend(cls_indices[closest_idx])
+
+    result_df = df.loc[keep_indices].reset_index(drop=True)
+    return result_df, result_df[target]
+
+
 def render():
     page_header("Class Imbalance Handler", "Detect class skew and fix it with SMOTE, random oversampling, or undersampling.", "⚖️")
 
@@ -127,19 +182,20 @@ def render():
     cat_cols = [c for c in all_cols if c not in num_cols and c != target]
     all_feature_cols = [c for c in all_cols if c != target]
 
-    if not feature_cols:
-        st.warning("Need numeric feature columns for resampling. Encode categorical features first (Smart Cleaning page).")
-        st.stop()
-
     method = st.selectbox("Resampling method", [
         "SMOTE (Synthetic Minority Oversampling)",
         "Random Oversampling",
         "Random Undersampling",
+        "Gower Distance Undersampling",
         "SMOTE + Tomek Links (Combined)",
     ])
 
     y = df[target]
     uses_smote = method.startswith("SMOTE")
+
+    if uses_smote and not feature_cols:
+        st.warning("SMOTE requires numeric feature columns. Encode categorical features first (Smart Cleaning page), or use Random/Gower undersampling.")
+        st.stop()
 
     # Warn about large datasets with SMOTE methods
     if uses_smote and len(df) > 50_000:
@@ -148,6 +204,16 @@ def render():
             f"models that scale poorly on large datasets. Consider using Random "
             f"Over/Undersampling, or subsample your data first."
         )
+
+    # Warn about large datasets with Gower distance
+    if method == "Gower Distance Undersampling":
+        majority_count = y.value_counts().max()
+        if majority_count > 50_000:
+            st.warning(
+                f"Largest class has {majority_count:,} rows. Gower distance computes an "
+                f"O(n×m×p) distance matrix that may be slow. Consider Random "
+                f"Undersampling for very large datasets."
+            )
 
     if st.button("Apply Resampling"):
         with st.spinner("Resampling..."):
@@ -212,6 +278,12 @@ def render():
                         )
 
                     new_df = result_df[[c for c in df.columns if c in result_df.columns]]
+                elif method == "Gower Distance Undersampling":
+                    result_df, y_res = _gower_undersample(
+                        df, target, all_feature_cols
+                    )
+                    new_df = result_df[[c for c in df.columns if c in result_df.columns]].copy()
+
                 else:
                     # Random over/undersampling — works on all column types
                     X_all = df[all_feature_cols]
@@ -374,6 +446,7 @@ This page detects class imbalance in classification targets and provides resampl
 - **SMOTE (Synthetic Minority Oversampling Technique)** — generates **synthetic** minority class samples by interpolating between existing minority samples and their k-nearest neighbors. Produces more diverse samples than simple duplication. The `k_neighbors` parameter is automatically adjusted based on the smallest class size.
 - **Random Oversampling** — **duplicates** existing minority class samples at random until all classes are balanced. Simple but can lead to overfitting on duplicated samples.
 - **Random Undersampling** — **removes** majority class samples at random until all classes are balanced. Fast but discards potentially useful data.
+- **Gower Distance Undersampling** — an **informed** undersampling method that keeps majority class samples closest to the minority class boundary based on Gower distance. Unlike random undersampling, it preserves the most informative majority samples — those near the decision boundary — while removing redundant ones far from it. Works natively on **mixed numeric + categorical features** without requiring encoding. Slower than random undersampling on large datasets due to distance matrix computation (O(n×m×p)).
 - **SMOTE + Tomek Links** — a **hybrid** approach that first applies SMOTE to oversample the minority class, then removes **Tomek links** (pairs of nearest neighbors from different classes that are close together). This cleans up the decision boundary for better separation.
 
 #### Before vs After Comparison

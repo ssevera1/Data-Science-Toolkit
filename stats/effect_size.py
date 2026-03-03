@@ -8,7 +8,10 @@ def cohens_d_one_sample(data, mu):
     """Cohen's d for one-sample t-test."""
     data = np.array(data, dtype=float)
     data = data[~np.isnan(data)]
-    return (data.mean() - mu) / data.std(ddof=1)
+    sd = data.std(ddof=1)
+    if sd == 0:
+        return 0.0
+    return (data.mean() - mu) / sd
 
 
 def cohens_d_independent(group1, group2):

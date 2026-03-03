@@ -120,8 +120,15 @@ def sanitize_csv(dataframe):
     """Prefix formula-trigger characters to prevent CSV injection in Excel.
 
     This is the single shared implementation — all CSV exports must use it.
+    Sanitizes both cell values and column headers since column names originate
+    from user-uploaded files.
     """
     out = dataframe.copy()
+    # Sanitize column headers
+    out.columns = [
+        "'" + c if isinstance(c, str) and c and c[0] in _FORMULA_TRIGGERS else c
+        for c in out.columns
+    ]
     for col in out.select_dtypes(include=["object", "category"]).columns:
         out[col] = out[col].apply(
             lambda v: "'" + v if isinstance(v, str) and v and v[0] in _FORMULA_TRIGGERS else v
@@ -133,7 +140,9 @@ def export_csv():
     """Export the current data as CSV string."""
     df = get_df().dropna(how="all")
     sanitized = df.apply(
-        lambda col: col.map(_sanitize_formula_cell) if col.dtype == object else col
+        lambda col: col.map(_sanitize_formula_cell)
+        if col.dtype == object or str(col.dtype) == "category"
+        else col
     )
     return sanitized.to_csv(index=False)
 
@@ -142,7 +151,9 @@ def export_excel():
     """Export the current data as Excel bytes."""
     df = get_df().dropna(how="all")
     sanitized = df.apply(
-        lambda col: col.map(_sanitize_formula_cell) if col.dtype == object else col
+        lambda col: col.map(_sanitize_formula_cell)
+        if col.dtype == object or str(col.dtype) == "category"
+        else col
     )
     output = io.BytesIO()
     sanitized.to_excel(output, index=False)

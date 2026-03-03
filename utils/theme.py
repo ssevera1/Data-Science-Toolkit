@@ -96,7 +96,7 @@ def register_plotly_theme():
     tpl.layout = go.Layout(
         paper_bgcolor=c["bg_primary"],
         plot_bgcolor=c["bg_primary"],
-        font=dict(color=c["text_body"], family="Inter, sans-serif"),
+        font=dict(color=c["text_body"], family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"),
         title=dict(font=dict(color=c["text_bright"])),
         xaxis=dict(
             gridcolor=c["border"],
@@ -143,9 +143,8 @@ def inject_global_css():
     css = f"""
     <style>
     /* ── Font ───────────────────────────────────────────────────── */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     html, body, [class*="css"] {{
-        font-family: 'Inter', sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }}
 
     /* ── Sidebar ────────────────────────────────────────────────── */

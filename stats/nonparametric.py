@@ -139,8 +139,8 @@ def friedman_test(df, value_col, within_col, subject_col, alpha=0.05):
     # Pivot to wide format
     wide = clean.pivot(index=subject_col, columns=within_col, values=value_col).dropna()
 
-    if wide.shape[1] < 2:
-        return {"test": "Friedman Test", "chi2": None, "p": None, "detail": "Need at least 2 conditions."}
+    if wide.shape[1] < 3:
+        return {"test": "Friedman Test", "chi2": None, "p": None, "detail": "Need at least 3 conditions."}
 
     groups = [wide[col].values for col in wide.columns]
     chi2_stat, p_value = stats.friedmanchisquare(*groups)
