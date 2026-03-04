@@ -1,4 +1,5 @@
 import json
+import warnings
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -92,6 +93,11 @@ def render():
         from sklearn.pipeline import Pipeline
 
         optuna.logging.set_verbosity(optuna.logging.WARNING)
+        warnings.filterwarnings(
+            "ignore",
+            message="X does not have valid feature names",
+            category=UserWarning,
+        )
 
         trial_history = []
 

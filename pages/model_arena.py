@@ -1,3 +1,4 @@
+import warnings
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -106,6 +107,15 @@ def render():
         from sklearn.model_selection import cross_validate
         from sklearn.preprocessing import StandardScaler, LabelEncoder
         from sklearn.pipeline import Pipeline
+
+        # Suppress sklearn feature-name warnings from LightGBM/XGBoost
+        # (StandardScaler outputs numpy arrays which lack the feature names
+        # that these models internally generate during fit)
+        warnings.filterwarnings(
+            "ignore",
+            message="X does not have valid feature names",
+            category=UserWarning,
+        )
 
         # Encode target
         if task == "Classification":

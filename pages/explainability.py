@@ -1,3 +1,4 @@
+import warnings
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -41,7 +42,13 @@ def train_model(_X, _y, model_name, _task, feature_hash):
         cls = GradientBoostingClassifier if _task == "Classification" else GradientBoostingRegressor
         model = cls(n_estimators=100, random_state=42)
 
-    model.fit(X_scaled, _y)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="X does not have valid feature names",
+            category=UserWarning,
+        )
+        model.fit(X_scaled, _y)
     return model, scaler, X_scaled
 
 
