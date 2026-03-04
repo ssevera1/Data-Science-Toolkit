@@ -104,7 +104,7 @@ def render():
             elif df[col].dtype == object:
                 sample = df[col].dropna().head(20)
                 try:
-                    pd.to_datetime(sample)
+                    pd.to_datetime(sample, format="mixed")
                     potential_dt.append(col)
                 except (ValueError, TypeError):
                     pass
@@ -114,7 +114,7 @@ def render():
             manual_col = st.selectbox("Try parsing column as datetime", all_cols)
             if st.button("Parse as Datetime"):
                 try:
-                    df[manual_col] = pd.to_datetime(df[manual_col])
+                    df[manual_col] = pd.to_datetime(df[manual_col], format="mixed")
                     st.session_state["df"] = df
                     st.success(f"Parsed {manual_col} as datetime.")
                     st.rerun()
@@ -131,7 +131,7 @@ def render():
 
             if sel and features and st.button("Extract Datetime Features"):
                 for col in sel:
-                    dt = pd.to_datetime(df[col], errors="coerce")
+                    dt = pd.to_datetime(df[col], errors="coerce", format="mixed")
                     for feat in features:
                         name = f"{col}_{feat}"
                         if feat == "year":
