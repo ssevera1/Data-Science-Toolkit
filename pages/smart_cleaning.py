@@ -1,8 +1,17 @@
+import hashlib
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 from utils.theme import page_header
 from core.data_manager import sanitize_csv as _sanitize_csv
+
+
+def _sha256_hash(val):
+    """Hash a value with SHA-256, preserving NaN."""
+    if pd.isna(val):
+        return val
+    return hashlib.sha256(str(val).encode("utf-8")).hexdigest()
 
 
 def _guard():
@@ -17,8 +26,9 @@ def render():
     _guard()
     df = st.session_state["df"].copy()
 
-    tab_missing, tab_outliers, tab_encode, tab_dedup = st.tabs(
-        ["Missing Values", "Outlier Treatment", "Encoding", "Deduplication"]
+    tab_missing, tab_outliers, tab_encode, tab_dedup, tab_anon = st.tabs(
+        ["Missing Values", "Outlier Treatment", "Encoding", "Deduplication",
+         "Anonymize"]
     )
 
     # ── Missing Values ─────────────────────────────────────────────────────────
@@ -118,7 +128,7 @@ def render():
                         q3 = df[col].quantile(0.75)
                         iqr = q3 - q1
                         lower, upper = q1 - iqr_mult * iqr, q3 + iqr_mult * iqr
-                        df = df[(df[col] >= lower) & (df[col] <= upper)]
+                        df = df[((df[col] >= lower) & (df[col] <= upper)) | df[col].isna()]
 
                 st.session_state["df"] = df
                 st.success("Outlier treatment applied.")
@@ -145,7 +155,9 @@ def render():
             if sel_enc and st.button("Apply Encoding"):
                 for col in sel_enc:
                     if enc_method == "Label Encoding (ordinal)":
-                        df[col] = df[col].astype("category").cat.codes
+                        _mask = df[col].isna()
+                        df[col] = df[col].astype("category").cat.codes.astype("Int64")
+                        df.loc[_mask, col] = pd.NA
                     elif enc_method == "One-Hot Encoding":
                         dummies = pd.get_dummies(df[col], prefix=col, drop_first=True)
                         df = pd.concat([df.drop(columns=[col]), dummies], axis=1)
@@ -175,13 +187,165 @@ def render():
         else:
             st.success("No duplicate rows found.")
 
+    # ── Anonymize ──────────────────────────────────────────────────────────
+    with tab_anon:
+        st.subheader("Anonymize Data")
+        st.markdown(
+            "Anonymize sensitive columns before sharing or exporting. "
+            "All mappings are generated from the current data at runtime, so "
+            "new values in a larger file are handled automatically."
+        )
+
+        all_cols = df.columns.tolist()
+
+        # ── Section 1: SHA-256 Hash Identifiers ───────────────────────
+        st.markdown("#### Hash Identifiers (SHA-256)")
+        st.markdown(
+            "Apply a cryptographic hash to identifier columns (e.g., Employee "
+            "ID, SSN). If the same value appears multiple times it always "
+            "maps to the **same** hash, preserving linkability without "
+            "revealing identities."
+        )
+        hash_cols = st.multiselect(
+            "Columns to hash",
+            options=all_cols,
+            key="anon_hash_cols",
+        )
+
+        if hash_cols:
+            preview_rows = min(5, len(df))
+            if preview_rows > 0:
+                preview = pd.DataFrame({
+                    col: [
+                        h[:12] + "..." if isinstance(h, str) else "NaN"
+                        for h in (
+                            _sha256_hash(v)
+                            for v in df[col].head(preview_rows)
+                        )
+                    ]
+                    for col in hash_cols
+                })
+                st.markdown("**Preview** (first 12 chars shown):")
+                st.dataframe(
+                    preview, hide_index=True, use_container_width=True,
+                )
+
+        # ── Section 2: Remap Categorical Values ──────────────────────
+        st.markdown("---")
+        st.markdown("#### Remap Categorical Values")
+        st.markdown(
+            "Replace category names with sequential labels (e.g., *HR* "
+            "→ *Department\\_1*). Grouping and sorting remain intact."
+        )
+        remaining_for_map = [c for c in all_cols if c not in hash_cols]
+        map_cols = st.multiselect(
+            "Columns to remap",
+            options=remaining_for_map,
+            key="anon_map_cols",
+        )
+
+        if map_cols:
+            for col in map_cols:
+                unique_vals = sorted(df[col].dropna().unique(), key=str)
+                if not len(unique_vals):
+                    st.warning(f"**{col}** has no non-null values to remap.")
+                    continue
+                mapping = {
+                    val: f"{col}_{i + 1}"
+                    for i, val in enumerate(unique_vals)
+                }
+                n_missing = int(df[col].isna().sum())
+                map_df = pd.DataFrame(
+                    list(mapping.items()), columns=["Original", "Mapped To"],
+                )
+                label = f"**{col}** — {len(unique_vals)} unique values"
+                if n_missing:
+                    label += f" ({n_missing} NaN preserved)"
+                with st.expander(label, expanded=False):
+                    st.dataframe(
+                        map_df, hide_index=True, use_container_width=True,
+                    )
+
+        # ── Section 3: Drop Columns ──────────────────────────────────
+        st.markdown("---")
+        st.markdown("#### Drop Columns")
+        st.markdown("Select columns to remove entirely from the dataset.")
+        remaining_for_drop = [
+            c for c in all_cols if c not in hash_cols and c not in map_cols
+        ]
+        drop_cols = st.multiselect(
+            "Columns to drop",
+            options=remaining_for_drop,
+            key="anon_drop_cols",
+        )
+
+        # ── Apply ────────────────────────────────────────────────────
+        st.markdown("---")
+        has_actions = bool(hash_cols or map_cols or drop_cols)
+
+        if has_actions:
+            st.markdown(
+                f"**Actions queued:** "
+                f"{len(hash_cols)} column(s) to hash, "
+                f"{len(map_cols)} column(s) to remap, "
+                f"{len(drop_cols)} column(s) to drop."
+            )
+
+        if has_actions and st.button(
+            "Apply Anonymization", type="primary", key="anon_apply"
+        ):
+            # Hash
+            for col in hash_cols:
+                df[col] = df[col].apply(_sha256_hash)
+
+            # Remap (NaN values are preserved — .map() leaves them as NaN)
+            for col in map_cols:
+                unique_vals = sorted(df[col].dropna().unique(), key=str)
+                if not len(unique_vals):
+                    continue  # skip all-NaN columns
+                mapping = {
+                    val: f"{col}_{i + 1}"
+                    for i, val in enumerate(unique_vals)
+                }
+                df[col] = df[col].map(
+                    lambda v, m=mapping: m.get(v, v) if pd.notna(v) else v,
+                )
+
+            # Drop
+            if drop_cols:
+                df = df.drop(columns=drop_cols)
+
+            st.session_state["df"] = df
+
+            parts = []
+            if hash_cols:
+                parts.append(f"{len(hash_cols)} column(s) hashed")
+            if map_cols:
+                parts.append(f"{len(map_cols)} column(s) remapped")
+            if drop_cols:
+                parts.append(f"{len(drop_cols)} column(s) dropped")
+            st.success(f"Anonymization applied: {', '.join(parts)}.")
+            st.rerun()
+
+        # Download anonymized data (always available — downloads current state)
+        st.markdown("---")
+        st.markdown("#### Download Anonymized Data")
+        anon_csv = _sanitize_csv(df).to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "Download CSV",
+            anon_csv,
+            "anonymized_data.csv",
+            "text/csv",
+            key="anon_download",
+        )
+
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()
     with st.expander("Page Guide & Explanation", expanded=False):
         st.markdown("""
 #### Smart Cleaning — One-Click Data Preparation
 
-This page provides four tabs for common data cleaning tasks. All changes update the shared dataset used across the app.
+This page provides five tabs for common data cleaning tasks. All changes update the shared dataset used across the app.
 
 ---
 
@@ -213,6 +377,12 @@ This page provides four tabs for common data cleaning tasks. All changes update 
 #### Deduplication Tab
 - Detects and displays **exact duplicate rows** in the dataset.
 - Choose which duplicate to **keep** — the **first** or **last** occurrence — and remove the rest.
+
+#### Anonymize Tab
+- **Hash Identifiers (SHA-256)** — applies a cryptographic hash to identifier columns (Employee ID, SSN, etc.). The same input always produces the same hash, so an individual appearing multiple times remains linked — without revealing who they are.
+- **Remap Categorical Values** — replaces human-readable category names with sequential labels (e.g., *HR* → *Department_1*). Unique values are detected at runtime, so new values in a larger file are handled automatically. Grouping and sorting remain intact.
+- **Drop Columns** — removes selected columns entirely from the dataset.
+- Click **Apply Anonymization** to execute all queued actions at once, then use the **Download CSV** button to export the anonymized data.
 
 #### Download Section
 - After cleaning, download the updated dataset as a **CSV file**. The download applies CSV-injection sanitization to protect against formula-based attacks in spreadsheet applications.

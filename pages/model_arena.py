@@ -108,15 +108,6 @@ def render():
         from sklearn.preprocessing import StandardScaler, LabelEncoder
         from sklearn.pipeline import Pipeline
 
-        # Suppress sklearn feature-name warnings from LightGBM/XGBoost
-        # (StandardScaler outputs numpy arrays which lack the feature names
-        # that these models internally generate during fit)
-        warnings.filterwarnings(
-            "ignore",
-            message="X does not have valid feature names",
-            category=UserWarning,
-        )
-
         # Encode target
         if task == "Classification":
             le = LabelEncoder()
@@ -231,8 +222,14 @@ def render():
                 ])
 
                 t0 = time()
-                cv_results = cross_validate(pipe, X, y_enc, cv=cv_folds, scoring=scoring,
-                                            return_train_score=False, n_jobs=-1)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message="X does not have valid feature names",
+                        category=UserWarning,
+                    )
+                    cv_results = cross_validate(pipe, X, y_enc, cv=cv_folds, scoring=scoring,
+                                                return_train_score=False, n_jobs=-1)
                 elapsed = time() - t0
 
                 row = {"Model": model_name, "Time (s)": round(elapsed, 2)}
@@ -247,8 +244,8 @@ def render():
 
                 results.append(row)
 
-            except Exception:
-                results.append({"Model": model_name, "Error": "Training failed"})
+            except Exception as e:
+                results.append({"Model": model_name, "Error": f"Training failed: {e}"})
 
         progress.progress(1.0)
         status.write("Benchmark complete!")

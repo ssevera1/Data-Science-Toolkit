@@ -17,3 +17,4 @@ pingouin>=0.5.4
 fpdf2>=2.7.0
 kaleido==0.2.1
 gower>=0.0.7
+lifelines>=0.28.0

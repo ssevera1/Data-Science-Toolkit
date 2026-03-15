@@ -79,7 +79,17 @@ def render():
     with tab_corr:
         st.subheader("Correlation with Target")
         method = st.selectbox("Method", ["pearson", "spearman"], key="corr_method")
-        corr_scores = X.corrwith(y, method=method).abs().sort_values(ascending=False)
+        # Drop zero-variance columns — correlation is undefined for constants
+        _X_corr = X.loc[:, X.std() > 0]
+        import warnings as _w
+        with _w.catch_warnings():
+            _w.simplefilter("ignore", RuntimeWarning)
+            corr_scores = _X_corr.corrwith(y, method=method).abs().sort_values(ascending=False)
+        # Add back constant columns with correlation = 0
+        _const_cols = [c for c in X.columns if c not in _X_corr.columns]
+        for _cc in _const_cols:
+            corr_scores[_cc] = 0.0
+        corr_scores = corr_scores.sort_values(ascending=False)
         corr_df = pd.DataFrame({"Feature": corr_scores.index, "Abs Correlation": corr_scores.values})
         results["Correlation"] = corr_df.set_index("Feature")["Abs Correlation"]
 

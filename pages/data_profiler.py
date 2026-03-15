@@ -145,7 +145,7 @@ def render():
         c4.metric("Memory", mem_str)
 
         st.markdown("#### Descriptive Statistics")
-        st.dataframe(desc_stats_df, width="stretch")
+        st.dataframe(desc_stats_df.fillna("").astype(str), width="stretch")
 
         st.markdown("#### Column Types")
         st.plotly_chart(type_chart_fig, width="stretch")

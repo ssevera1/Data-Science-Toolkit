@@ -93,7 +93,7 @@ def render():
 
         with tab_chart:
             if len(predictors) == 1:
-                clean = df[[dv, predictors[0]]].dropna()
+                clean = df[[dv, predictors[0]]].dropna().copy()
                 for c in clean.columns:
                     clean[c] = pd.to_numeric(clean[c], errors="coerce")
                 clean = clean.dropna()

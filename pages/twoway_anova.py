@@ -39,7 +39,7 @@ def render():
             st.error("Please select two different factors.")
             return
 
-        clean = df[[dv, factor1, factor2]].dropna()
+        clean = df[[dv, factor1, factor2]].dropna().copy()
         clean[dv] = pd.to_numeric(clean[dv], errors="coerce")
         clean = clean.dropna()
 

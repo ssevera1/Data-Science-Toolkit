@@ -44,7 +44,7 @@ def render():
 
         result = spearman_correlation(df[var1], df[var2], alpha=alpha)
 
-        clean = df[[var1, var2]].dropna()
+        clean = df[[var1, var2]].dropna().copy()
         clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
         clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
         clean = clean.dropna()

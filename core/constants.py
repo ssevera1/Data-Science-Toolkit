@@ -43,6 +43,9 @@ TEST_CATEGORIES = {
         "Chi-Squared Test",
         "Binomial Test",
     ],
+    "Survival": [
+        "Survival Analysis",
+    ],
 }
 
 # P-value interpretation thresholds

@@ -85,7 +85,7 @@ def render():
 
         with tab_chart:
             if len(predictors) == 1:
-                clean = df[[dv, predictors[0]]].dropna()
+                clean = df[[dv, predictors[0]]].dropna().copy()
                 for c in clean.columns:
                     clean[c] = pd.to_numeric(clean[c], errors="coerce")
                 clean = clean.dropna()
@@ -118,7 +118,7 @@ def render():
                 st.markdown("### Classification Summary")
                 predicted_class = (result["predicted_probs"] >= 0.5).astype(int)
                 cols_used = [dv] + predictors
-                clean = df[cols_used].dropna()
+                clean = df[cols_used].dropna().copy()
                 for c in cols_used:
                     clean[c] = pd.to_numeric(clean[c], errors="coerce")
                 clean = clean.dropna()
@@ -142,7 +142,7 @@ def render():
         )
         _include_chart = st.checkbox("Include chart in PDF", value=True, key="log_pdf_chart")
         if _include_chart and len(predictors) == 1:
-            _clean = df[[dv, predictors[0]]].dropna()
+            _clean = df[[dv, predictors[0]]].dropna().copy()
             for _c in _clean.columns:
                 _clean[_c] = pd.to_numeric(_clean[_c], errors="coerce")
             _clean = _clean.dropna()

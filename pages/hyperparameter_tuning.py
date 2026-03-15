@@ -93,11 +93,6 @@ def render():
         from sklearn.pipeline import Pipeline
 
         optuna.logging.set_verbosity(optuna.logging.WARNING)
-        warnings.filterwarnings(
-            "ignore",
-            message="X does not have valid feature names",
-            category=UserWarning,
-        )
 
         trial_history = []
 
@@ -175,7 +170,13 @@ def render():
                 model = cls(**params)
 
             pipe = Pipeline([("scaler", StandardScaler()), ("model", model)])
-            scores = cross_val_score(pipe, X, y, cv=cv_folds, scoring=primary_metric, n_jobs=-1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message="X does not have valid feature names",
+                    category=UserWarning,
+                )
+                scores = cross_val_score(pipe, X, y, cv=cv_folds, scoring=primary_metric, n_jobs=-1)
             score = scores.mean()
 
             trial_history.append({

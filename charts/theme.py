@@ -2,9 +2,7 @@
 
 import plotly.graph_objects as go
 import plotly.io as pio
-from utils.theme import get_colors
-
-FONT_FAMILY = "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
+from utils.theme import get_colors, FONT_FAMILY
 
 
 def get_chart_colors():

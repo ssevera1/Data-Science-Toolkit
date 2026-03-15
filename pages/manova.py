@@ -54,7 +54,7 @@ def render():
         result = manova(df, dv_cols, group, alpha=alpha)
 
         # Precompute clean DataFrame for charts
-        clean = df[dv_cols + [group]].dropna()
+        clean = df[dv_cols + [group]].dropna().copy()
         for c in dv_cols:
             clean[c] = pd.to_numeric(clean[c], errors="coerce")
         clean = clean.dropna()

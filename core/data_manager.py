@@ -130,31 +130,17 @@ def sanitize_csv(dataframe):
         for c in out.columns
     ]
     for col in out.select_dtypes(include=["object", "category"]).columns:
-        out[col] = out[col].apply(
-            lambda v: "'" + v if isinstance(v, str) and v and v[0] in _FORMULA_TRIGGERS else v
-        )
+        out[col] = out[col].apply(_sanitize_formula_cell)
     return out
 
 
 def export_csv():
     """Export the current data as CSV string."""
-    df = get_df().dropna(how="all")
-    sanitized = df.apply(
-        lambda col: col.map(_sanitize_formula_cell)
-        if col.dtype == object or str(col.dtype) == "category"
-        else col
-    )
-    return sanitized.to_csv(index=False)
+    return sanitize_csv(get_df().dropna(how="all")).to_csv(index=False)
 
 
 def export_excel():
     """Export the current data as Excel bytes."""
-    df = get_df().dropna(how="all")
-    sanitized = df.apply(
-        lambda col: col.map(_sanitize_formula_cell)
-        if col.dtype == object or str(col.dtype) == "category"
-        else col
-    )
     output = io.BytesIO()
-    sanitized.to_excel(output, index=False)
+    sanitize_csv(get_df().dropna(how="all")).to_excel(output, index=False)
     return output.getvalue()

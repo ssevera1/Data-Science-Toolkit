@@ -51,18 +51,29 @@ def _sanitize_text(text) -> str:
         "\u00b2": "^2",    # superscript 2
         "\u03b1": "alpha", # alpha
         "\u03b2": "beta",  # beta
+        "\u03b3": "gamma", # gamma
+        "\u03b4": "delta", # delta
+        "\u03b5": "epsilon",# epsilon
         "\u03b7": "eta",   # eta
         "\u03bb": "lambda",# lambda
         "\u03bc": "mu",    # mu
+        "\u03c0": "pi",    # pi
         "\u03c1": "rho",   # rho
         "\u03c3": "sigma", # sigma
+        "\u03c6": "phi",   # phi
         "\u03c7": "chi",   # chi
+        "\u03c4": "tau",   # tau
         "\u03c9": "omega", # omega
+        "\u0394": "Delta", # capital Delta
+        "\u03a3": "Sigma", # capital Sigma
         "\u2080": "0",     # subscript 0
         "\u00b3": "^3",    # superscript 3
     }
     for char, repl in replacements.items():
         text = text.replace(char, repl)
+    # Strip C0 control characters (null bytes, etc.) — keep \n, \r, \t
+    import re
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
     # Strip any remaining non-latin-1 characters
     return text.encode("latin-1", errors="replace").decode("latin-1")
 
@@ -952,6 +963,87 @@ def _render_hyperparameter(pdf: _DSReport, entry: dict, include_charts: bool):
             pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
 
 
+def _render_survival(pdf: _DSReport, entry: dict, include_charts: bool):
+    """Render Kaplan-Meier, Cox PH, or Extended Cox results."""
+    result = entry["result"]
+    alpha = entry.get("alpha", 0.05)
+    variables = entry.get("variables", {})
+    entry_type = entry.get("entry_type", "")
+
+    pdf.section_heading(entry["title"])
+
+    for k, v in variables.items():
+        pdf.kv_line(k.replace("_", " ").title(), str(v))
+    pdf.ln(2)
+
+    if entry_type == "survival_km":
+        if "logrank_p" in result:
+            pdf.sig_badge(result.get("logrank_p", 1.0), alpha)
+
+        pdf.kv_line("N", _safe_str(result.get("n")))
+        pdf.kv_line("Events", _safe_str(result.get("n_events")))
+        pdf.kv_line("Censored", _safe_str(result.get("n_censored")))
+
+        if result.get("median_survival") is not None:
+            pdf.kv_line("Median Survival", _safe_str(result.get("median_survival")))
+            if result.get("median_ci_lower") is not None:
+                pdf.kv_line(
+                    "Median 95% CI",
+                    f"[{_safe_str(result.get('median_ci_lower'))}, "
+                    f"{_safe_str(result.get('median_ci_upper'))}]",
+                )
+
+        if "logrank_statistic" in result:
+            pdf.kv_line("Log-Rank Statistic",
+                        _safe_str(result.get("logrank_statistic")))
+            pdf.kv_line("Log-Rank p-value",
+                        _safe_str(result.get("logrank_p")))
+            pdf.kv_line("df", _safe_str(result.get("logrank_df")))
+
+        if "hazard_ratio" in result:
+            pdf.kv_line("Hazard Ratio",
+                        _safe_str(result.get("hazard_ratio")))
+            pdf.kv_line(
+                "HR 95% CI",
+                f"[{_safe_str(result.get('hr_ci_lower'))}, "
+                f"{_safe_str(result.get('hr_ci_upper'))}]",
+            )
+            pdf.kv_line("Reference Group",
+                        str(result.get("hr_reference", "")))
+
+    elif entry_type in ("survival_cox", "survival_extended"):
+        pdf.kv_line("N", _safe_str(result.get("n")))
+        pdf.kv_line("Events", _safe_str(result.get("n_events")))
+        pdf.kv_line("Concordance Index",
+                    _safe_str(result.get("concordance_index")))
+        pdf.kv_line("Partial AIC", _safe_str(result.get("partial_aic")))
+        pdf.kv_line("Log-Likelihood",
+                    _safe_str(result.get("log_likelihood")))
+
+        if entry_type == "survival_extended":
+            if "base_aic" in result:
+                pdf.kv_line("Base Model AIC",
+                            _safe_str(result.get("base_aic")))
+            if "lr_test_p" in result:
+                pdf.kv_line(
+                    "LR Test (Extended vs Base)",
+                    f"chi2={_safe_str(result.get('lr_test_statistic'))}, "
+                    f"p={_safe_str(result.get('lr_test_p'))}",
+                )
+
+    pdf.ln(3)
+
+    for tbl in entry.get("tables", []):
+        df = _deserialize_df(tbl)
+        pdf.dataframe_table(df, tbl.get("label", ""))
+
+    _render_assumptions(pdf, result.get("assumptions", {}))
+
+    if include_charts:
+        for fig_entry in entry.get("figures", []):
+            pdf.embed_chart(fig_entry["fig_dict"], fig_entry.get("label", ""))
+
+
 def _render_fallback(pdf: _DSReport, entry: dict, include_charts: bool):
     """Fallback renderer for unknown entry types."""
     pdf.section_heading(entry.get("title", "Analysis Result"))
@@ -997,6 +1089,9 @@ _RENDERERS = {
     "data_drift": _render_data_drift,
     "explainability": _render_explainability,
     "hyperparameter_tuning": _render_hyperparameter,
+    "survival_km": _render_survival,
+    "survival_cox": _render_survival,
+    "survival_extended": _render_survival,
 }
 
 
@@ -1068,7 +1163,7 @@ def _deep_native(obj):
 def _is_model_object(obj) -> bool:
     """Check if obj is a statsmodels or sklearn model (non-serializable)."""
     type_name = type(obj).__module__
-    return type_name.startswith(("statsmodels.", "sklearn."))
+    return type_name.startswith(("statsmodels.", "sklearn.", "lifelines."))
 
 
 def generate_single_report(entry: dict, include_charts: bool = True) -> bytes:

@@ -78,6 +78,36 @@ def validate_nominal(col_name, min_categories=2):
     return True, None
 
 
+def validate_survival_inputs(time_col, event_col):
+    """Validate survival analysis time and event columns."""
+    df = get_df()
+
+    # Time: numeric and non-negative
+    time_vals = pd.to_numeric(df[time_col], errors="coerce").dropna()
+    if len(time_vals) < 2:
+        return False, f"'{time_col}' needs at least 2 numeric values."
+    if (time_vals < 0).any():
+        return False, f"'{time_col}' contains negative values. Time must be non-negative."
+
+    # Event: binary 0/1 only
+    event_vals = pd.to_numeric(df[event_col], errors="coerce").dropna()
+    unique_events = set(event_vals.unique())
+    if not unique_events.issubset({0, 1, 0.0, 1.0}):
+        return False, f"'{event_col}' must contain only 0 (censored) and 1 (event) values."
+    if 1 not in unique_events and 1.0 not in unique_events:
+        return False, f"'{event_col}' has no events (no 1 values). Need at least one event."
+
+    # Check at least 2 complete pairs
+    clean = df[[time_col, event_col]].copy()
+    clean[time_col] = pd.to_numeric(clean[time_col], errors="coerce")
+    clean[event_col] = pd.to_numeric(clean[event_col], errors="coerce")
+    clean = clean.dropna()
+    if len(clean) < 2:
+        return False, "Need at least 2 complete time-event pairs."
+
+    return True, None
+
+
 def get_clean_data(columns):
     """Get a DataFrame with only the specified columns, dropping all-NA rows."""
     df = get_df()

@@ -207,7 +207,7 @@ def render():
 
     # Warn about large datasets with Gower distance
     if method == "Gower Distance Undersampling":
-        majority_count = y.value_counts().max()
+        majority_count = vc.max()
         if majority_count > 50_000:
             st.warning(
                 f"Largest class has {majority_count:,} rows. Gower distance computes an "
@@ -303,14 +303,15 @@ def render():
                 # Build before/after DataFrames for cache
                 before_vc = vc_df.copy()
 
-                after_vc = y_res.value_counts().reset_index()
+                after_counts = y_res.value_counts()
+                after_vc = after_counts.reset_index()
                 after_vc.columns = ["Class", "Count"]
                 after_vc["Percentage"] = (after_vc["Count"] / len(y_res) * 100).round(2)
 
                 compare = pd.DataFrame({
-                    "Class": list(vc.index) + list(y_res.value_counts().index),
-                    "Count": list(vc.values) + list(y_res.value_counts().values),
-                    "Stage": ["Before"] * len(vc) + ["After"] * len(y_res.value_counts()),
+                    "Class": list(vc.index) + list(after_counts.index),
+                    "Count": list(vc.values) + list(after_counts.values),
+                    "Stage": ["Before"] * len(vc) + ["After"] * len(after_counts),
                 })
 
                 # Store results in session state cache

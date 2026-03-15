@@ -43,7 +43,7 @@ def render():
             st.error(msg)
             return
 
-        clean = df[[dv, group]].dropna()
+        clean = df[[dv, group]].dropna().copy()
         clean[dv] = pd.to_numeric(clean[dv], errors="coerce")
         clean = clean.dropna()
 

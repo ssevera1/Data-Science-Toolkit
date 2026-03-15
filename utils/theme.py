@@ -9,6 +9,8 @@ import streamlit as st
 import plotly.io as pio
 import plotly.graph_objects as go
 
+FONT_FAMILY = "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
+
 # ── Color Palettes ───────────────────────────────────────────────────────────
 
 DARK_COLORS = {
@@ -96,7 +98,7 @@ def register_plotly_theme():
     tpl.layout = go.Layout(
         paper_bgcolor=c["bg_primary"],
         plot_bgcolor=c["bg_primary"],
-        font=dict(color=c["text_body"], family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"),
+        font=dict(color=c["text_body"], family=FONT_FAMILY),
         title=dict(font=dict(color=c["text_bright"])),
         xaxis=dict(
             gridcolor=c["border"],
@@ -144,7 +146,7 @@ def inject_global_css():
     <style>
     /* ── Font ───────────────────────────────────────────────────── */
     html, body, [class*="css"] {{
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-family: {FONT_FAMILY};
     }}
 
     /* ── Sidebar ────────────────────────────────────────────────── */
@@ -673,20 +675,26 @@ def inject_global_css():
 
     /* ── Status widget (top-right running/emoji indicator) ──────── */
     [data-testid="stStatusWidget"] svg {{
-        fill: {c['text_body']} !important;
-        stroke: {c['text_body']} !important;
-        color: {c['text_body']} !important;
+        fill: {c['text_muted']} !important;
+        stroke: {c['text_muted']} !important;
+        color: {c['text_muted']} !important;
     }}
     [data-testid="stStatusWidget"] button {{
-        color: {c['text_body']} !important;
+        color: {c['text_muted']} !important;
     }}
     [data-testid="stStatusWidget"] i,
     [data-testid="stStatusWidget"] span {{
-        color: {c['text_body']} !important;
+        color: {c['text_muted']} !important;
     }}
     [data-testid="stStatusWidget"] button svg {{
         fill: {c['text_muted']} !important;
         stroke: {c['text_muted']} !important;
+    }}
+
+    /* ── Hide Streamlit deploy button ──────────────────────────── */
+    [data-testid="stAppDeployButton"],
+    .stDeployButton {{
+        display: none !important;
     }}
 
     /* ── Multi-select tags ──────────────────────────────────────── */

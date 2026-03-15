@@ -10,6 +10,13 @@ def qq_plot(series, name, title=None):
     """QQ plot comparing data to normal distribution."""
     data = np.sort(series.dropna().values)
     n = len(data)
+    if n < 2:
+        fig = go.Figure()
+        fig.update_layout(title=title or f"Q-Q Plot: {name}",
+                          annotations=[dict(text="Need at least 2 data points",
+                                            xref="paper", yref="paper",
+                                            x=0.5, y=0.5, showarrow=False)])
+        return apply_theme(fig)
     colors = get_chart_colors()
 
     # Theoretical quantiles

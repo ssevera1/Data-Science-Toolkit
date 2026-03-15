@@ -10,7 +10,7 @@ from stats.assumptions import shapiro_wilk
 def linear_regression(df, dv, predictors, alpha=0.05):
     """Multiple linear regression (OLS)."""
     cols = [dv] + predictors
-    clean = df[cols].dropna()
+    clean = df[cols].dropna().copy()
     for c in cols:
         clean[c] = pd.to_numeric(clean[c], errors="coerce")
     clean = clean.dropna()
@@ -19,6 +19,12 @@ def linear_regression(df, dv, predictors, alpha=0.05):
     X = clean[predictors].values
     X_const = sm.add_constant(X)
 
+    # Guard: detect zero-variance predictors that cause singular matrices
+    zero_var = [p for p in predictors if clean[p].std() == 0]
+    if zero_var:
+        return {"test": "Linear Regression",
+                "error": f"Zero-variance predictor(s): {', '.join(zero_var)}. Remove constant columns."}
+
     model = sm.OLS(y, X_const).fit()
 
     # Residual normality
@@ -26,14 +32,15 @@ def linear_regression(df, dv, predictors, alpha=0.05):
 
     # Build coefficient table
     coef_names = ["(Intercept)"] + predictors
+    ci = model.conf_int(alpha)
     coef_table = pd.DataFrame({
         "Variable": coef_names,
-        "B": model.params,
-        "Std. Error": model.bse,
-        "t": model.tvalues,
-        "p": model.pvalues,
-        "CI Lower": model.conf_int(alpha)[:, 0],
-        "CI Upper": model.conf_int(alpha)[:, 1],
+        "B": model.params[:len(coef_names)],
+        "Std. Error": model.bse[:len(coef_names)],
+        "t": model.tvalues[:len(coef_names)],
+        "p": model.pvalues[:len(coef_names)],
+        "CI Lower": ci[:len(coef_names), 0],
+        "CI Upper": ci[:len(coef_names), 1],
     })
 
     # Standardized coefficients (beta)
@@ -67,7 +74,7 @@ def linear_regression(df, dv, predictors, alpha=0.05):
 def logistic_regression(df, dv, predictors, alpha=0.05):
     """Logistic regression (Logit)."""
     cols = [dv] + predictors
-    clean = df[cols].dropna()
+    clean = df[cols].dropna().copy()
     for c in cols:
         clean[c] = pd.to_numeric(clean[c], errors="coerce")
     clean = clean.dropna()
@@ -83,17 +90,20 @@ def logistic_regression(df, dv, predictors, alpha=0.05):
 
     model = sm.Logit(y, X_const).fit(disp=0)
 
-    # Coefficient table
+    # Coefficient table — clip params before exp() to avoid overflow
     coef_names = ["(Intercept)"] + predictors
+    params_clipped = np.clip(model.params, -700, 700)
+    ci = model.conf_int(alpha)
+    ci_clipped = np.clip(ci, -700, 700)
     coef_table = pd.DataFrame({
         "Variable": coef_names,
         "B": model.params,
         "Std. Error": model.bse,
         "z": model.tvalues,
         "p": model.pvalues,
-        "OR": np.exp(model.params),
-        "CI Lower (OR)": np.exp(model.conf_int(alpha)[:, 0]),
-        "CI Upper (OR)": np.exp(model.conf_int(alpha)[:, 1]),
+        "OR": np.exp(params_clipped),
+        "CI Lower (OR)": np.exp(ci_clipped[:, 0]),
+        "CI Upper (OR)": np.exp(ci_clipped[:, 1]),
     })
 
     # Pseudo R-squared (McFadden)

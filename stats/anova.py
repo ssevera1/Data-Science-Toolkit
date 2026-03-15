@@ -9,7 +9,7 @@ from stats.assumptions import shapiro_wilk, levene_test, normality_per_group
 
 def oneway_anova(df, value_col, group_col, alpha=0.05):
     """One-way ANOVA."""
-    clean = df[[value_col, group_col]].dropna()
+    clean = df[[value_col, group_col]].dropna().copy()
     clean[value_col] = pd.to_numeric(clean[value_col], errors="coerce")
     clean = clean.dropna()
 
@@ -26,10 +26,11 @@ def oneway_anova(df, value_col, group_col, alpha=0.05):
     ss_between = aov["SS"].iloc[0]
     ss_within = aov["SS"].iloc[1]
     ss_total = ss_between + ss_within
-    eta2 = ss_between / ss_total
+    eta2 = ss_between / ss_total if ss_total > 0 else 0.0
     df_between = aov["DF"].iloc[0]
     ms_within = aov["MS"].iloc[1]
-    omega2 = max(0, (ss_between - df_between * ms_within) / (ss_total + ms_within))
+    denom = ss_total + ms_within
+    omega2 = max(0, (ss_between - df_between * ms_within) / denom) if denom > 0 else 0.0
 
     # Post-hoc (Tukey HSD)
     posthoc = None

@@ -50,7 +50,7 @@ def render():
             st.error(result.get("detail", "Could not compute test."))
             return
 
-        clean = df[[var1, var2]].dropna()
+        clean = df[[var1, var2]].dropna().copy()
         clean[var1] = pd.to_numeric(clean[var1], errors="coerce")
         clean[var2] = pd.to_numeric(clean[var2], errors="coerce")
         clean = clean.dropna()

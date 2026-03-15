@@ -35,7 +35,7 @@ def render():
         alpha = st.slider("Significance level (α)", 0.01, 0.10, 0.05, 0.01, key="fr_alpha")
 
     if dv and within and subject and st.button("Calculate", type="primary"):
-        clean = df[[dv, within, subject]].dropna()
+        clean = df[[dv, within, subject]].dropna().copy()
         clean[dv] = pd.to_numeric(clean[dv], errors="coerce")
         clean = clean.dropna()
 
