@@ -327,17 +327,6 @@ def render():
             st.success(f"Anonymization applied: {', '.join(parts)}.")
             st.rerun()
 
-        # Download anonymized data (always available — downloads current state)
-        st.markdown("---")
-        st.markdown("#### Download Anonymized Data")
-        anon_csv = _sanitize_csv(df).to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "Download CSV",
-            anon_csv,
-            "anonymized_data.csv",
-            "text/csv",
-            key="anon_download",
-        )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()
