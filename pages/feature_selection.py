@@ -52,15 +52,21 @@ def render():
         st.warning("No numeric feature columns available. Encode categorical features first (Smart Cleaning page).")
         st.stop()
 
-    X = df[feature_cols].fillna(0)
+    # Drop rows where target is NaN, then align X and y
+    _valid_mask = df[target_col].notna()
+    X = df.loc[_valid_mask, feature_cols].fillna(0)
 
     # Encode target for all methods
     if task == "Classification":
         from sklearn.preprocessing import LabelEncoder
         le = LabelEncoder()
-        y = pd.Series(le.fit_transform(df[target_col]), name=target_col)
+        y = pd.Series(le.fit_transform(df.loc[_valid_mask, target_col]), index=X.index, name=target_col)
     else:
-        y = df[target_col].fillna(0)
+        y = df.loc[_valid_mask, target_col].fillna(0)
+
+    if len(X) == 0:
+        st.warning("No valid rows after removing missing target values.")
+        st.stop()
 
     # ── Cache invalidation ────────────────────────────────────────────────
     _fingerprint = (target_col, task, tuple(feature_cols))
@@ -110,7 +116,11 @@ def render():
         mi_func = mutual_info_classif if task == "Classification" else mutual_info_regression
         st.info(f"Task: **{task}** ({n_classes} unique target values)")
 
-        mi_scores = mi_func(X, y, random_state=42)
+        try:
+            mi_scores = mi_func(X, y, random_state=42)
+        except ValueError as e:
+            st.error(f"Mutual Information failed: {e}")
+            mi_scores = np.zeros(len(feature_cols))
         mi_df = pd.DataFrame({"Feature": feature_cols, "MI Score": mi_scores})
         mi_df = mi_df.sort_values("MI Score", ascending=False)
         results["Mutual Info"] = mi_df.set_index("Feature")["MI Score"]
