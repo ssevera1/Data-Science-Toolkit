@@ -81,7 +81,7 @@ def render():
             st.markdown('<div style="margin-top:1rem;"></div>', unsafe_allow_html=True)
             with open(HERO_IMAGE, "rb") as _f:
                 _hero_bytes = _f.read()
-            st.image(_hero_bytes, use_container_width=True)
+            st.image(_hero_bytes, width="stretch")
 
     st.markdown(
         f"""

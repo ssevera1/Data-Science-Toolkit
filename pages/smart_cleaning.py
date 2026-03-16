@@ -227,7 +227,7 @@ def render():
                 })
                 st.markdown("**Preview** (first 12 chars shown):")
                 st.dataframe(
-                    preview, hide_index=True, use_container_width=True,
+                    preview, hide_index=True, width="stretch",
                 )
 
         # ── Section 2: Remap Categorical Values ──────────────────────
@@ -263,7 +263,7 @@ def render():
                     label += f" ({n_missing} NaN preserved)"
                 with st.expander(label, expanded=False):
                     st.dataframe(
-                        map_df, hide_index=True, use_container_width=True,
+                        map_df, hide_index=True, width="stretch",
                     )
 
         # ── Section 3: Drop Columns ──────────────────────────────────
