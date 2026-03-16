@@ -19,6 +19,7 @@ def render():
     page_header("Data Profiler", "Automated exploratory data analysis — distributions, correlations, missing patterns, and outliers.", "📊")
 
     _guard()
+    pd.set_option("future.no_silent_downcasting", True)
     df = st.session_state["df"]
 
     # ── Pre-compute data for tabs and PDF export ──────────────────────────────
