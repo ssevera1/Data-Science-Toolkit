@@ -61,6 +61,11 @@ def _render_tool_cards(tools, c, card_grad, prefix):
 
 
 def render():
+    st.markdown("""<style>
+.block-container {
+    padding-top: 1rem;
+}
+</style>""", unsafe_allow_html=True)
     c = get_colors()
     light = _is_light()
     accent_grad = f"linear-gradient(90deg,{c['title_gradient_start']} 0%,{c['title_gradient_end']} 100%)"
@@ -85,7 +90,7 @@ def render():
 
     st.markdown(
         f"""
-        <div style="text-align:center; padding-top: 0rem; padding-bottom: 0; margin-top: -2rem;">
+        <div style="text-align:center; padding-top: 0rem; padding-bottom: 0; margin-top: 0rem;">
             <div class="hero-badge">⚡ Open-Source Data Science &amp; Statistics Toolkit</div>
             <div class="hero-title">DS Power Tools</div>
             <p style="font-size:1.15rem;color:{c['text_muted']};margin:0.5rem auto 0 auto;max-width:700px;text-align:center;">
