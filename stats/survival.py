@@ -520,7 +520,10 @@ def extended_cox_model(df, time_col, event_col, predictors,
             "n": n,
             "n_subjects": n_subjects,
             "n_events": n_events,
-            "concordance_index": float(ctv.concordance_index_),
+            "concordance_index": (
+                float(ctv.concordance_index_)
+                if hasattr(ctv, "concordance_index_") else None
+            ),
             "partial_aic": float(ctv.AIC_),
             "log_likelihood": float(ctv.log_likelihood_),
             "coef_table": coef_table,

@@ -424,7 +424,8 @@ def _render_extended_results(result, coef_table, alpha, time_var, stop_var,
             cols[0].metric("Episodes", result["n"])
             cols[1].metric("Subjects", result["n_subjects"])
             cols[2].metric("Events", result["n_events"])
-            cols[3].metric("C-Index", f"{result['concordance_index']:.4f}")
+            _ci = result.get("concordance_index")
+            cols[3].metric("C-Index", f"{_ci:.4f}" if _ci is not None else "N/A")
             cols[4].metric("Partial AIC", f"{result['partial_aic']:.1f}")
         else:
             cols = st.columns(4)
