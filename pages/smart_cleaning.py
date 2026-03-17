@@ -159,7 +159,7 @@ def render():
                         df[col] = df[col].astype("category").cat.codes.astype("Int64")
                         df.loc[_mask, col] = pd.NA
                     elif enc_method == "One-Hot Encoding":
-                        dummies = pd.get_dummies(df[col], prefix=col, drop_first=True)
+                        dummies = pd.get_dummies(df[col], prefix=col, drop_first=True, dtype=int)
                         df = pd.concat([df.drop(columns=[col]), dummies], axis=1)
                     elif enc_method == "Frequency Encoding":
                         freq = df[col].value_counts(normalize=True)
