@@ -384,7 +384,7 @@ def cox_regression(df, time_col, event_col, predictors, nominal_preds=None,
 
 
 def extended_cox_model(df, time_col, event_col, predictors,
-                       nominal_preds=None, alpha=0.05):
+                       nominal_preds=None, alpha=0.05, stop_col=None):
     """Extended Cox model with time-varying coefficients.
 
     Adds covariate * log(time) interaction terms to detect and model
@@ -393,11 +393,13 @@ def extended_cox_model(df, time_col, event_col, predictors,
     Parameters
     ----------
     df : DataFrame
-    time_col : str
+    time_col : str — duration column, or start time when stop_col is provided
     event_col : str
     predictors : list of str
     nominal_preds : list of str, optional — predictors to dummy-encode
     alpha : float
+    stop_col : str, optional — stop time column; if provided, duration is
+        computed as stop_col - time_col
 
     Returns
     -------
@@ -409,10 +411,24 @@ def extended_cox_model(df, time_col, event_col, predictors,
     nominal_preds = set(nominal_preds or [])
 
     cols = [time_col, event_col] + list(predictors)
+    if stop_col:
+        cols = [time_col, stop_col, event_col] + list(predictors)
     clean = df[cols].copy()
     clean[time_col] = pd.to_numeric(clean[time_col], errors="coerce")
+    if stop_col:
+        clean[stop_col] = pd.to_numeric(clean[stop_col], errors="coerce")
     clean[event_col] = pd.to_numeric(clean[event_col], errors="coerce")
     clean = clean.dropna()
+
+    # Compute duration from start/stop if provided
+    if stop_col:
+        clean["_duration"] = clean[stop_col] - clean[time_col]
+        invalid = (clean["_duration"] <= 0).sum()
+        if invalid > 0:
+            clean = clean[clean["_duration"] > 0].copy()
+        duration_col = "_duration"
+    else:
+        duration_col = time_col
 
     # Dummy-encode nominal predictors
     cols_to_encode = [p for p in predictors if p in nominal_preds]
@@ -421,7 +437,10 @@ def extended_cox_model(df, time_col, event_col, predictors,
             clean, columns=cols_to_encode, drop_first=True, dtype=float,
         )
 
-    model_preds = [c for c in clean.columns if c not in (time_col, event_col)]
+    model_preds = [
+        c for c in clean.columns
+        if c not in (time_col, stop_col, event_col, "_duration")
+    ]
     for c in model_preds:
         clean[c] = pd.to_numeric(clean[c], errors="coerce")
     clean = clean.dropna()
@@ -443,7 +462,7 @@ def extended_cox_model(df, time_col, event_col, predictors,
     # ── Base Cox model (for comparison) ─────────────────────────────
     try:
         cph_base = CoxPHFitter(alpha=alpha)
-        cph_base.fit(clean, duration_col=time_col, event_col=event_col)
+        cph_base.fit(clean, duration_col=duration_col, event_col=event_col)
         base_aic = float(cph_base.AIC_partial_)
         base_ll = float(cph_base.log_likelihood_)
         base_cindex = float(cph_base.concordance_index_)
@@ -455,7 +474,7 @@ def extended_cox_model(df, time_col, event_col, predictors,
 
     # ── Extended model: covariate * log(time) interactions ──────────
     extended = clean.copy()
-    log_time = np.log(extended[time_col].clip(lower=1e-10))
+    log_time = np.log(extended[duration_col].clip(lower=1e-10))
 
     interaction_cols = []
     for pred in model_preds:
@@ -465,7 +484,7 @@ def extended_cox_model(df, time_col, event_col, predictors,
 
     try:
         cph_ext = CoxPHFitter(alpha=alpha)
-        cph_ext.fit(extended, duration_col=time_col, event_col=event_col)
+        cph_ext.fit(extended, duration_col=duration_col, event_col=event_col)
     except Exception as e:
         return {
             "test_name": "Extended Cox Model",

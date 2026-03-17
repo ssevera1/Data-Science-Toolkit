@@ -42,16 +42,32 @@ def render():
         key="surv_mode",
     )
 
-    # ── Common variable selection ─────────────────────────────────────
-    col1, col2 = st.columns(2)
-    with col1:
-        time_var = select_metric_variable(
-            "Time variable (duration)", key="surv_time",
-        )
-    with col2:
-        event_var = select_nominal_variable(
-            "Event indicator (0=censored, 1=event)", key="surv_event",
-        )
+    # ── Variable selection (mode-dependent) ──────────────────────────
+    stop_var = None
+    if mode == "Extended Cox Model":
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            time_var = select_metric_variable(
+                "Start time", key="surv_time",
+            )
+        with col2:
+            stop_var = select_metric_variable(
+                "Stop time", key="surv_stop",
+            )
+        with col3:
+            event_var = select_nominal_variable(
+                "Event indicator (0=censored, 1=event)", key="surv_event",
+            )
+    else:
+        col1, col2 = st.columns(2)
+        with col1:
+            time_var = select_metric_variable(
+                "Time variable (duration)", key="surv_time",
+            )
+        with col2:
+            event_var = select_nominal_variable(
+                "Event indicator (0=censored, 1=event)", key="surv_event",
+            )
 
     # ── Mode-specific inputs ──────────────────────────────────────────
     group_var = None
@@ -64,7 +80,7 @@ def render():
         )
     else:
         # Cox PH or Extended Cox: predictor selection
-        exclude = {time_var, event_var} - {None}
+        exclude = {time_var, stop_var, event_var} - {None}
         available = [c for c in df.columns if c not in exclude]
         predictors = st.multiselect(
             "Predictor variables",
@@ -87,7 +103,9 @@ def render():
 
     # ── Calculate ─────────────────────────────────────────────────────
     can_calculate = bool(time_var and event_var)
-    if mode != "Kaplan-Meier / Log-Rank":
+    if mode == "Extended Cox Model":
+        can_calculate = can_calculate and bool(stop_var) and bool(predictors)
+    elif mode != "Kaplan-Meier / Log-Rank":
         can_calculate = can_calculate and bool(predictors)
 
     if can_calculate and st.button("Calculate", type="primary"):
@@ -109,12 +127,13 @@ def render():
                 nominal_preds=nominal_preds, alpha=alpha,
             )
         else:  # Extended Cox Model
-            if time_var in predictors or event_var in predictors:
+            bad = {time_var, stop_var, event_var} - {None}
+            if bad & set(predictors):
                 st.error("Time and event variables cannot be predictors.")
                 return
             result = extended_cox_model(
                 df, time_var, event_var, predictors,
-                nominal_preds=nominal_preds, alpha=alpha,
+                nominal_preds=nominal_preds, alpha=alpha, stop_col=stop_var,
             )
 
         if "error" in result:
@@ -124,7 +143,7 @@ def render():
         # Cache — extract coef_table (DataFrame) separately
         cache_data = {
             "inputs": (
-                mode, time_var, event_var, group_var,
+                mode, time_var, stop_var, event_var, group_var,
                 tuple(predictors or []), alpha,
             ),
             "result": {k: v for k, v in result.items() if k != "coef_table"},
@@ -136,7 +155,7 @@ def render():
 
     # ── Cache invalidation ────────────────────────────────────────────
     current_inputs = (
-        mode, time_var, event_var, group_var,
+        mode, time_var, stop_var, event_var, group_var,
         tuple(predictors or []), alpha,
     )
     cached = st.session_state.get(_CACHE_KEY)
@@ -163,7 +182,7 @@ def render():
         )
     else:
         _render_extended_results(
-            result, coef_table, alpha, time_var, event_var, predictors,
+            result, coef_table, alpha, time_var, stop_var, event_var, predictors,
         )
 
     _render_page_guide()
@@ -369,8 +388,8 @@ def _render_cox_results(result, coef_table, alpha, time_var, event_var,
 # ── Extended Cox results ─────────────────────────────────────────────
 
 
-def _render_extended_results(result, coef_table, alpha, time_var, event_var,
-                             predictors):
+def _render_extended_results(result, coef_table, alpha, time_var, stop_var,
+                             event_var, predictors):
     tab_res, tab_chart = st.tabs(["Results", "Charts"])
 
     with tab_res:
@@ -445,17 +464,20 @@ def _render_extended_results(result, coef_table, alpha, time_var, event_var,
                 pd.DataFrame(result["decay_results"]), "Decay Detection",
             ),
         )
+    _time_label = f"{time_var} → {stop_var}" if stop_var else time_var
     _log_entry = build_log_entry(
         entry_type="survival_extended",
         title=(
-            f"Extended Cox: {time_var} ~ "
+            f"Extended Cox: [{_time_label}] ~ "
             f"{' + '.join(predictors[:3])}"
             f"{'...' if len(predictors) > 3 else ''}"
         ),
         result=result,
         tables=_tables,
         variables={
-            "time": time_var, "event": event_var,
+            "start_time": time_var,
+            **({"stop_time": stop_var} if stop_var else {}),
+            "event": event_var,
             "predictors": ", ".join(predictors),
         },
         alpha=alpha,
