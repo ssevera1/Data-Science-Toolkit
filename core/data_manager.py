@@ -10,7 +10,7 @@ from core.state import set_df, get_df, get_var_types, set_var_type
 def load_csv(uploaded_file):
     """Load data from a CSV file."""
     try:
-        df = pd.read_csv(uploaded_file)
+        df = pd.read_csv(uploaded_file, low_memory=False)
         _apply_loaded_df(df)
         return True, None
     except Exception:
