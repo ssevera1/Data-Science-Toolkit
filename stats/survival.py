@@ -385,32 +385,151 @@ def cox_regression(df, time_col, event_col, predictors, nominal_preds=None,
 
 def extended_cox_model(df, time_col, event_col, predictors,
                        nominal_preds=None, alpha=0.05, stop_col=None,
-                       penalizer=0.0):
+                       penalizer=0.0, id_col=None):
     """Extended Cox model with time-varying coefficients.
 
-    Adds covariate * log(time) interaction terms to detect and model
-    non-proportional hazards (decay in covariate effects over time).
+    Episodic mode (id_col + stop_col provided): uses CoxTimeVaryingFitter on
+    counting-process format data — no log(t) interactions added, avoiding the
+    double-interaction problem for pre-split episodic datasets.
+
+    Standard mode (duration only): uses CoxPHFitter + covariate*log(t)
+    interaction terms to detect non-proportional hazards.
 
     Parameters
     ----------
     df : DataFrame
-    time_col : str — duration column, or start time when stop_col is provided
+    time_col : str — duration column (standard) or episode start (episodic)
     event_col : str
     predictors : list of str
     nominal_preds : list of str, optional — predictors to dummy-encode
     alpha : float
-    stop_col : str, optional — stop time column; if provided, duration is
-        computed as stop_col - time_col
+    stop_col : str, optional — episode stop time
+    penalizer : float — L2 regularization
+    id_col : str, optional — subject identifier (required for episodic mode)
 
     Returns
     -------
-    dict with base + interaction coefficients, decay test results
+    dict with coefficients, concordance, optional decay test results
     """
     from lifelines import CoxPHFitter
     from scipy.stats import chi2
 
     nominal_preds = set(nominal_preds or [])
 
+    # ── Episodic mode: CoxTimeVaryingFitter ──────────────────────────
+    if stop_col and id_col:
+        from lifelines import CoxTimeVaryingFitter
+
+        cols = [id_col, time_col, stop_col, event_col] + list(predictors)
+        clean = df[cols].copy()
+        clean[time_col] = pd.to_numeric(clean[time_col], errors="coerce")
+        clean[stop_col] = pd.to_numeric(clean[stop_col], errors="coerce")
+        clean[event_col] = pd.to_numeric(clean[event_col], errors="coerce")
+        clean = clean.dropna()
+        clean = clean[clean[stop_col] > clean[time_col]].copy()
+
+        cols_to_encode = [p for p in predictors if p in nominal_preds]
+        if cols_to_encode:
+            clean = pd.get_dummies(
+                clean, columns=cols_to_encode, drop_first=True, dtype=float,
+            )
+
+        model_preds = [
+            c for c in clean.columns
+            if c not in (id_col, time_col, stop_col, event_col)
+        ]
+        for c in model_preds:
+            clean[c] = pd.to_numeric(clean[c], errors="coerce")
+        clean = clean.dropna()
+
+        n = len(clean)
+        n_subjects = int(clean[id_col].nunique())
+        n_events = int(clean[event_col].sum())
+
+        if n < 10:
+            return {
+                "test_name": "Extended Cox Model (Episodic)",
+                "error": f"Need at least 10 episode rows, found {n}.",
+            }
+        if n_events < 5:
+            return {
+                "test_name": "Extended Cox Model (Episodic)",
+                "error": f"Need at least 5 events, found {n_events}.",
+            }
+
+        try:
+            ctv = CoxTimeVaryingFitter(penalizer=penalizer, alpha=alpha)
+            ctv.fit(
+                clean,
+                id_col=id_col,
+                start_col=time_col,
+                stop_col=stop_col,
+                event_col=event_col,
+            )
+        except Exception as e:
+            return {
+                "test_name": "Extended Cox Model (Episodic)",
+                "error": f"Model fitting failed: {e}",
+            }
+
+        summary = ctv.summary
+        ci_pct = int((1 - alpha) * 100)
+        try:
+            coef_table = pd.DataFrame({
+                "Covariate": summary.index.tolist(),
+                "log(HR)": summary["coef"].values.round(4),
+                "HR": summary["exp(coef)"].values.round(4),
+                "SE": summary["se(coef)"].values.round(4),
+                "z": summary["z"].values.round(4),
+                "p": summary["p"].values.round(4),
+                f"HR {ci_pct}% CI Lower": summary[
+                    f"exp(coef) lower {ci_pct}%"
+                ].values.round(4),
+                f"HR {ci_pct}% CI Upper": summary[
+                    f"exp(coef) upper {ci_pct}%"
+                ].values.round(4),
+            })
+            ci_lo_col = f"HR {ci_pct}% CI Lower"
+            ci_hi_col = f"HR {ci_pct}% CI Upper"
+        except KeyError:
+            coef_table = pd.DataFrame({
+                "Covariate": summary.index.tolist(),
+                "log(HR)": summary["coef"].values.round(4),
+                "HR": summary["exp(coef)"].values.round(4),
+                "SE": summary["se(coef)"].values.round(4),
+                "z": summary["z"].values.round(4),
+                "p": summary["p"].values.round(4),
+            })
+            ci_lo_col = ci_hi_col = None
+
+        forest_data = []
+        if ci_lo_col and ci_lo_col in coef_table.columns:
+            forest_data = [
+                {
+                    "covariate": row["Covariate"],
+                    "hr": float(row["HR"]),
+                    "ci_lower": float(row[ci_lo_col]),
+                    "ci_upper": float(row[ci_hi_col]),
+                    "p": float(row["p"]),
+                }
+                for _, row in coef_table.iterrows()
+            ]
+
+        return {
+            "test_name": "Extended Cox Model (Episodic / CoxTimeVaryingFitter)",
+            "n": n,
+            "n_subjects": n_subjects,
+            "n_events": n_events,
+            "concordance_index": float(ctv.concordance_index_),
+            "partial_aic": float(ctv.AIC_),
+            "log_likelihood": float(ctv.log_likelihood_),
+            "coef_table": coef_table,
+            "decay_results": [],
+            "forest_data": forest_data,
+            "assumptions": {},
+        }
+
+    # ── Standard mode: CoxPHFitter + log(t) interactions ─────────────
     cols = [time_col, event_col] + list(predictors)
     if stop_col:
         cols = [time_col, stop_col, event_col] + list(predictors)
@@ -421,17 +540,13 @@ def extended_cox_model(df, time_col, event_col, predictors,
     clean[event_col] = pd.to_numeric(clean[event_col], errors="coerce")
     clean = clean.dropna()
 
-    # Compute duration from start/stop if provided
     if stop_col:
         clean["_duration"] = clean[stop_col] - clean[time_col]
-        invalid = (clean["_duration"] <= 0).sum()
-        if invalid > 0:
-            clean = clean[clean["_duration"] > 0].copy()
+        clean = clean[clean["_duration"] > 0].copy()
         duration_col = "_duration"
     else:
         duration_col = time_col
 
-    # Dummy-encode nominal predictors
     cols_to_encode = [p for p in predictors if p in nominal_preds]
     if cols_to_encode:
         clean = pd.get_dummies(
@@ -460,10 +575,12 @@ def extended_cox_model(df, time_col, event_col, predictors,
             "error": f"Need at least 5 events, found {n_events}.",
         }
 
-    # ── Base Cox model (for comparison) ─────────────────────────────
+    # Bug 1 fix: only pass the columns the model should see
+    fit_cols = [duration_col, event_col] + model_preds
+
     try:
         cph_base = CoxPHFitter(alpha=alpha, penalizer=penalizer)
-        cph_base.fit(clean, duration_col=duration_col, event_col=event_col)
+        cph_base.fit(clean[fit_cols], duration_col=duration_col, event_col=event_col)
         base_aic = float(cph_base.AIC_partial_)
         base_ll = float(cph_base.log_likelihood_)
         base_cindex = float(cph_base.concordance_index_)
@@ -473,8 +590,7 @@ def extended_cox_model(df, time_col, event_col, predictors,
             "error": f"Base model fitting failed: {e}",
         }
 
-    # ── Extended model: covariate * log(time) interactions ──────────
-    extended = clean.copy()
+    extended = clean[fit_cols].copy()
     log_time = np.log(extended[duration_col].clip(lower=1e-10))
 
     interaction_cols = []
@@ -492,7 +608,6 @@ def extended_cox_model(df, time_col, event_col, predictors,
             "error": f"Extended model fitting failed: {e}",
         }
 
-    # Build coefficient table
     summary = cph_ext.summary
     ci_pct = int((1 - alpha) * 100)
     coef_table = pd.DataFrame({
@@ -510,7 +625,6 @@ def extended_cox_model(df, time_col, event_col, predictors,
         ].values.round(4),
     })
 
-    # Decay detection: significance of interaction terms
     decay_results = []
     for pred in model_preds:
         int_col = f"{pred}_x_log(t)"
@@ -530,7 +644,6 @@ def extended_cox_model(df, time_col, event_col, predictors,
                 ) if p_val < alpha else "No significant change",
             })
 
-    # Likelihood ratio test: extended vs base
     lr_stat = max(0, 2 * (float(cph_ext.log_likelihood_) - base_ll))
     lr_df = len(interaction_cols)
     lr_p = float(chi2.sf(lr_stat, lr_df)) if lr_df > 0 else 1.0
@@ -553,7 +666,6 @@ def extended_cox_model(df, time_col, event_col, predictors,
         "assumptions": {},
     }
 
-    # Forest plot data
     ci_lo_col = f"HR {ci_pct}% CI Lower"
     ci_hi_col = f"HR {ci_pct}% CI Upper"
     result["forest_data"] = [
