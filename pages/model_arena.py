@@ -228,6 +228,11 @@ def render():
                         message="X does not have valid feature names",
                         category=UserWarning,
                     )
+                    warnings.filterwarnings(
+                        "ignore",
+                        message="Precision is ill-defined",
+                        category=UserWarning,
+                    )
                     cv_results = cross_validate(pipe, X, y_enc, cv=cv_folds, scoring=scoring,
                                                 return_train_score=False, n_jobs=-1)
                 elapsed = time() - t0
