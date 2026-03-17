@@ -19,6 +19,16 @@ def _guard():
         st.stop()
 
 
+_TREE_EXPLAINER_MODELS = {
+    "Random Forest", "Gradient Boosting", "XGBoost", "LightGBM",
+    "Decision Tree", "Extra Trees",
+}
+_LINEAR_EXPLAINER_MODELS = {
+    "Logistic Regression", "Linear Regression", "Ridge Regression",
+    "Lasso Regression", "ElasticNet",
+}
+
+
 @st.cache_resource
 def train_model(_X, _y, model_name, _task, feature_hash):
     from sklearn.preprocessing import StandardScaler
@@ -41,6 +51,48 @@ def train_model(_X, _y, model_name, _task, feature_hash):
         from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
         cls = GradientBoostingClassifier if _task == "Classification" else GradientBoostingRegressor
         model = cls(n_estimators=100, random_state=42)
+    elif model_name == "Logistic Regression":
+        from sklearn.linear_model import LogisticRegression
+        model = LogisticRegression(max_iter=1000, random_state=42)
+    elif model_name == "Linear Regression":
+        from sklearn.linear_model import LinearRegression
+        model = LinearRegression()
+    elif model_name == "Ridge Regression":
+        from sklearn.linear_model import Ridge
+        model = Ridge(random_state=42)
+    elif model_name == "Lasso Regression":
+        from sklearn.linear_model import Lasso
+        model = Lasso(random_state=42)
+    elif model_name == "ElasticNet":
+        from sklearn.linear_model import ElasticNet
+        model = ElasticNet(random_state=42)
+    elif model_name == "SVM (RBF)":
+        from sklearn.svm import SVC
+        model = SVC(random_state=42, probability=True)
+    elif model_name == "SVR (RBF)":
+        from sklearn.svm import SVR
+        model = SVR()
+    elif model_name == "K-Nearest Neighbors":
+        from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+        cls = KNeighborsClassifier if _task == "Classification" else KNeighborsRegressor
+        model = cls()
+    elif model_name == "Decision Tree":
+        from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+        cls = DecisionTreeClassifier if _task == "Classification" else DecisionTreeRegressor
+        model = cls(random_state=42)
+    elif model_name == "Naive Bayes":
+        from sklearn.naive_bayes import GaussianNB
+        model = GaussianNB()
+    elif model_name == "AdaBoost":
+        from sklearn.ensemble import AdaBoostClassifier, AdaBoostRegressor
+        cls = AdaBoostClassifier if _task == "Classification" else AdaBoostRegressor
+        model = cls(n_estimators=100, random_state=42)
+    elif model_name == "Extra Trees":
+        from sklearn.ensemble import ExtraTreesClassifier, ExtraTreesRegressor
+        cls = ExtraTreesClassifier if _task == "Classification" else ExtraTreesRegressor
+        model = cls(n_estimators=100, random_state=42, n_jobs=-1)
+    else:
+        raise ValueError(f"Unknown model: {model_name}")
 
     with warnings.catch_warnings():
         warnings.filterwarnings(
@@ -99,12 +151,20 @@ def render():
     else:
         y = y.fillna(0).astype(float).values
 
-    model_choice = st.selectbox("Model", [
-        "Random Forest",
-        "XGBoost",
-        "LightGBM",
-        "Gradient Boosting",
-    ])
+    if task == "Classification":
+        _model_options = [
+            "Random Forest", "XGBoost", "LightGBM", "Gradient Boosting",
+            "Logistic Regression", "SVM (RBF)", "K-Nearest Neighbors",
+            "Decision Tree", "Naive Bayes", "AdaBoost", "Extra Trees",
+        ]
+    else:
+        _model_options = [
+            "Random Forest", "XGBoost", "LightGBM", "Gradient Boosting",
+            "Linear Regression", "Ridge Regression", "Lasso Regression",
+            "ElasticNet", "SVR (RBF)", "K-Nearest Neighbors",
+            "Decision Tree", "AdaBoost", "Extra Trees",
+        ]
+    model_choice = st.selectbox("Model", _model_options, key="exp_model")
 
     tab_importance, tab_shap, tab_pdp = st.tabs(
         ["Feature Importance", "SHAP Analysis", "Partial Dependence"]
@@ -195,8 +255,11 @@ def render():
                 sample_idx = np.random.RandomState(42).choice(len(X_scaled), min(max_samples, len(X_scaled)), replace=False)
                 X_sample = X_scaled[sample_idx]
 
-                if model_choice in ["Random Forest", "Gradient Boosting", "XGBoost", "LightGBM"]:
+                if model_choice in _TREE_EXPLAINER_MODELS:
                     explainer = shap.TreeExplainer(model)
+                    shap_values = explainer.shap_values(X_sample)
+                elif model_choice in _LINEAR_EXPLAINER_MODELS:
+                    explainer = shap.LinearExplainer(model, X_sample)
                     shap_values = explainer.shap_values(X_sample)
                 else:
                     explainer = shap.KernelExplainer(model.predict, X_sample[:50])
