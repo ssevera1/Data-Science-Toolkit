@@ -384,7 +384,8 @@ def cox_regression(df, time_col, event_col, predictors, nominal_preds=None,
 
 
 def extended_cox_model(df, time_col, event_col, predictors,
-                       nominal_preds=None, alpha=0.05, stop_col=None):
+                       nominal_preds=None, alpha=0.05, stop_col=None,
+                       penalizer=0.0):
     """Extended Cox model with time-varying coefficients.
 
     Adds covariate * log(time) interaction terms to detect and model
@@ -461,7 +462,7 @@ def extended_cox_model(df, time_col, event_col, predictors,
 
     # ── Base Cox model (for comparison) ─────────────────────────────
     try:
-        cph_base = CoxPHFitter(alpha=alpha)
+        cph_base = CoxPHFitter(alpha=alpha, penalizer=penalizer)
         cph_base.fit(clean, duration_col=duration_col, event_col=event_col)
         base_aic = float(cph_base.AIC_partial_)
         base_ll = float(cph_base.log_likelihood_)
@@ -483,7 +484,7 @@ def extended_cox_model(df, time_col, event_col, predictors,
         interaction_cols.append(int_col)
 
     try:
-        cph_ext = CoxPHFitter(alpha=alpha)
+        cph_ext = CoxPHFitter(alpha=alpha, penalizer=penalizer)
         cph_ext.fit(extended, duration_col=duration_col, event_col=event_col)
     except Exception as e:
         return {

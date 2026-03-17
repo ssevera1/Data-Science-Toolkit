@@ -100,6 +100,18 @@ def render():
             "Significance level (\u03b1)", 0.01, 0.10, 0.05, 0.01,
             key="surv_alpha",
         )
+        penalizer = 0.0
+        if mode == "Extended Cox Model":
+            penalizer = st.number_input(
+                "Penalizer (L2 regularization)",
+                min_value=0.0, max_value=10.0, value=0.01, step=0.01,
+                key="surv_penalizer",
+                help=(
+                    "Adds L2 regularization to stabilize fitting on sparse "
+                    "episodic data. Set to 0.01–0.1 if the model fails with "
+                    "a singular matrix error."
+                ),
+            )
 
     # ── Calculate ─────────────────────────────────────────────────────
     can_calculate = bool(time_var and event_var)
@@ -134,6 +146,7 @@ def render():
             result = extended_cox_model(
                 df, time_var, event_var, predictors,
                 nominal_preds=nominal_preds, alpha=alpha, stop_col=stop_var,
+                penalizer=penalizer,
             )
 
         if "error" in result:
@@ -144,7 +157,7 @@ def render():
         cache_data = {
             "inputs": (
                 mode, time_var, stop_var, event_var, group_var,
-                tuple(predictors or []), alpha,
+                tuple(predictors or []), alpha, penalizer,
             ),
             "result": {k: v for k, v in result.items() if k != "coef_table"},
         }
@@ -156,7 +169,7 @@ def render():
     # ── Cache invalidation ────────────────────────────────────────────
     current_inputs = (
         mode, time_var, stop_var, event_var, group_var,
-        tuple(predictors or []), alpha,
+        tuple(predictors or []), alpha, penalizer,
     )
     cached = st.session_state.get(_CACHE_KEY)
     if cached and cached["inputs"] != current_inputs:
