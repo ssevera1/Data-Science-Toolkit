@@ -524,8 +524,10 @@ def extended_cox_model(df, time_col, event_col, predictors,
                 float(ctv.concordance_index_)
                 if hasattr(ctv, "concordance_index_") else None
             ),
-            "partial_aic": float(ctv.AIC_),
-            "log_likelihood": float(ctv.log_likelihood_),
+            "partial_aic": float(ctv.AIC_) if hasattr(ctv, "AIC_") else None,
+            "log_likelihood": (
+                float(ctv.log_likelihood_) if hasattr(ctv, "log_likelihood_") else None
+            ),
             "coef_table": coef_table,
             "decay_results": [],
             "forest_data": forest_data,
