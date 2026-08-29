@@ -1,7 +1,11 @@
 """Application constants: variable types, test names, thresholds."""
 
 # Variable types
-VARIABLE_TYPES = ["Metric", "Nominal", "Ordinal"]
+METRIC = "Metric"
+NOMINAL = "Nominal"
+ORDINAL = "Ordinal"
+
+VARIABLE_TYPES = [METRIC, NOMINAL, ORDINAL]
 
 # Default number of rows/columns for new data
 DEFAULT_ROWS = 20
