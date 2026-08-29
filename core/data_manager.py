@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from core.state import set_df, get_df, get_var_types, set_var_type
+from core import constants
 
 
 def load_csv(uploaded_file):
@@ -64,7 +65,7 @@ def _auto_detect_type(col, df):
     """Auto-detect variable type for a column."""
     series = df[col].dropna()
     if len(series) == 0:
-        set_var_type(col, "Metric")
+        set_var_type(col, constants.METRIC)
         return
 
     # Check if numeric
@@ -74,17 +75,14 @@ def _auto_detect_type(col, df):
     if non_null_numeric / len(series) > 0.5:
         n_unique = numeric.dropna().nunique()
         if n_unique <= 2:
-            set_var_type(col, "Nominal")
+            set_var_type(col, constants.NOMINAL)
         elif n_unique <= 7 and n_unique < len(series) * 0.3:
-            set_var_type(col, "Ordinal")
+            set_var_type(col, constants.ORDINAL)
         else:
-            set_var_type(col, "Metric")
+            set_var_type(col, constants.METRIC)
     else:
-        n_unique = series.nunique()
-        if n_unique <= 10:
-            set_var_type(col, "Nominal")
-        else:
-            set_var_type(col, "Text")
+        # Non-numeric columns are Nominal regardless of cardinality.
+        set_var_type(col, constants.NOMINAL)
 
 
 def add_column():
@@ -94,7 +92,7 @@ def add_column():
     new_col = f"Var{st.session_state.stats_col_counter}"
     df[new_col] = np.nan
     set_df(df)
-    set_var_type(new_col, "Metric")
+    set_var_type(new_col, constants.METRIC)
 
 
 def add_rows(n=10):
