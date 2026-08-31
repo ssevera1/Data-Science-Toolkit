@@ -250,6 +250,29 @@ def render():
                 fig.update_layout(height=400)
                 st.plotly_chart(fig, width="stretch")
 
+    # ── AI Interpretation ──────────────────────────────────────────────────
+    from components.ai_advisor import render_ai_interpretation
+    _n_drifted_num_ai = int(drift_df["Drift Detected"].sum()) if drift_df is not None else 0
+    _n_drifted_cat_ai = int(cat_df["Drift Detected"].sum()) if cat_df is not None else 0
+    _n_drifted_ai = _n_drifted_num_ai + _n_drifted_cat_ai
+    _n_features_ai = len(common_cols) + len(common_cat_cols)
+    _drift_pct_ai = f"{_n_drifted_ai / _n_features_ai * 100:.1f}%" if _n_features_ai > 0 else "0.0%"
+    ai_texts = render_ai_interpretation(
+        entry_type="data_drift",
+        result={
+            "n_features": _n_features_ai,
+            "n_drifted": _n_drifted_ai,
+            "drift_pct": _drift_pct_ai,
+            "alpha": alpha,
+        },
+        variables={
+            "numeric_features": len(common_cols),
+            "categorical_features": len(common_cat_cols),
+        },
+        alpha=alpha,
+        page_key="drift",
+    )
+
     # ── PDF Export ─────────────────────────────────────────────────────────
     st.divider()
 
@@ -282,6 +305,10 @@ def render():
         dataset_name=st.session_state.get("file_name", ""),
         alpha=alpha,
     )
+    if ai_texts.get("brief"):
+        _log_entry["ai_interpretation"] = ai_texts["brief"]
+    if ai_texts.get("deep_dive"):
+        _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
 
     _include_chart = st.checkbox("Include charts in PDF", value=True, key="drift_pdf_chart")
     if _include_chart and common_cols:

@@ -20,6 +20,11 @@ def init_state():
     if "stats_col_counter" not in st.session_state:
         st.session_state.stats_col_counter = DEFAULT_COLS
 
+    if "_gemini_cache" not in st.session_state:
+        st.session_state["_gemini_cache"] = {}
+    if "gemini_api_key" not in st.session_state:
+        st.session_state["gemini_api_key"] = None
+
 
 def _create_empty_df(n_rows=DEFAULT_ROWS, n_cols=DEFAULT_COLS):
     """Create an empty DataFrame with named columns."""
@@ -140,6 +145,9 @@ def clear_result_caches() -> None:
     Call this when the underlying dataset changes (e.g. new file upload,
     data edit) so that stale results are not displayed.
     """
-    to_delete = [k for k in st.session_state if k.startswith("_result_")]
+    to_delete = [
+        k for k in st.session_state
+        if k.startswith("_result_") or k.startswith("_gemini_")
+    ]
     for k in to_delete:
         del st.session_state[k]

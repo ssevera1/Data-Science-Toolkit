@@ -114,6 +114,16 @@ def render():
                 fig = histogram_with_normal(pd.Series(result["residuals"]), "Residuals")
                 st.plotly_chart(fig, width="stretch")
 
+        # ── AI Interpretation ──────────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        ai_texts = render_ai_interpretation(
+            entry_type="linear_regression",
+            result=result,
+            variables={"dv": dv, "predictors": ", ".join(predictors)},
+            alpha=alpha,
+            page_key="lr",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────────
         st.divider()
         _tables = [_serialize_df(result["coef_table"], "Coefficients")]
@@ -126,6 +136,10 @@ def render():
             alpha=alpha,
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include charts in PDF", value=True, key="lr_pdf_chart")
         if _include_chart:
             _figures = []

@@ -91,6 +91,18 @@ def render():
                             fig = single_boxplot(series, var)
                             st.plotly_chart(fig, width="stretch")
 
+        # ── AI Interpretation ──────────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        _desc_result = {}
+        if desc_table is not None:
+            _desc_result = {"summary": desc_table.T.to_dict(orient="index") if hasattr(desc_table.T, 'to_dict') else {}}
+        ai_texts = render_ai_interpretation(
+            entry_type="descriptive_stats",
+            result=_desc_result,
+            variables={"variables": ", ".join(selected)},
+            page_key="desc",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────────
         st.divider()
         _tables = []
@@ -108,6 +120,10 @@ def render():
             variables={"variables": ", ".join(selected)},
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include charts in PDF", value=True, key="desc_pdf_chart")
         if _include_chart and metric_vars:
             _figures = []

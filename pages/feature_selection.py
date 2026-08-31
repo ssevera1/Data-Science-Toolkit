@@ -250,6 +250,21 @@ def render():
                     keep = top_features + [target_col]
                     st.session_state["df"] = df[keep]
                     st.success(f"Reduced to {len(keep)} columns.")
+            # ── AI Interpretation ──────────────────────────────────
+            from components.ai_advisor import render_ai_interpretation
+            _top_ai = summary.index[:5].tolist() if len(summary) >= 5 else summary.index.tolist()
+            ai_texts = render_ai_interpretation(
+                entry_type="feature_selection",
+                result={
+                    "target": target_col,
+                    "task": task,
+                    "top_features": _top_ai,
+                    "n_features": len(feature_cols),
+                },
+                variables={"target": target_col, "task": task},
+                page_key="fsel",
+            )
+
             # ── PDF Export ─────────────────────────────────────────
             st.divider()
             _top = summary.index[:5].tolist() if len(summary) >= 5 else summary.index.tolist()
@@ -266,6 +281,10 @@ def render():
                 variables={"target": target_col, "task": task},
                 dataset_name=st.session_state.get("file_name", ""),
             )
+            if ai_texts.get("brief"):
+                _log_entry["ai_interpretation"] = ai_texts["brief"]
+            if ai_texts.get("deep_dive"):
+                _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
             _include_chart = st.checkbox("Include charts in PDF", value=True, key="fs_pdf_chart")
             if _include_chart:
                 _figures = []

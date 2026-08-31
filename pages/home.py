@@ -201,6 +201,32 @@ def render():
             })
             st.dataframe(info_df, width="stretch", hide_index=True)
 
+        # AI-recommended analysis plan
+        from components.ai_advisor import render_data_plan
+        _col_summaries = []
+        for col in df.columns:
+            _col_info = {
+                "name": col,
+                "dtype": str(df[col].dtype),
+                "n_unique": int(df[col].nunique()),
+                "n_missing": int(df[col].isnull().sum()),
+            }
+            if pd.api.types.is_numeric_dtype(df[col]):
+                _col_info["mean"] = float(df[col].mean()) if df[col].notna().any() else None
+                _col_info["std"] = float(df[col].std()) if df[col].notna().any() else None
+                _col_info["min"] = float(df[col].min()) if df[col].notna().any() else None
+                _col_info["max"] = float(df[col].max()) if df[col].notna().any() else None
+            _col_summaries.append(_col_info)
+
+        render_data_plan(
+            df_summary={
+                "columns": _col_summaries,
+                "n_rows": df.shape[0],
+                "n_cols": df.shape[1],
+            },
+            page_key="home",
+        )
+
         st.divider()
 
     # ── Tool Cards ────────────────────────────────────────────────────────

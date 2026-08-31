@@ -327,6 +327,21 @@ def render():
             st.success(f"Anonymization applied: {', '.join(parts)}.")
             st.rerun()
 
+    # ── AI Interpretation ──────────────────────────────────────────────────
+    from components.ai_advisor import render_ai_interpretation
+    _miss_total = df.isnull().sum().sum()
+    _n_dups = df.duplicated().sum()
+    ai_texts = render_ai_interpretation(
+        entry_type="smart_cleaning",
+        result={
+            "n_rows": len(df),
+            "n_cols": df.shape[1],
+            "missing_cells": int(_miss_total),
+            "duplicate_rows": int(_n_dups),
+        },
+        variables={},
+        page_key="clean",
+    )
 
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()

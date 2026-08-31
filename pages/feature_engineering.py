@@ -214,6 +214,20 @@ def render():
                 st.success(f"Applied {len(transforms)} transforms to {len(sel)} columns.")
                 st.dataframe(df.head(), width="stretch")
 
+    # ── AI Interpretation ──────────────────────────────────────────────────
+    from components.ai_advisor import render_ai_interpretation
+    ai_texts = render_ai_interpretation(
+        entry_type="feature_engineering",
+        result={
+            "n_rows": len(df),
+            "n_cols": df.shape[1],
+            "n_numeric": len(num_cols),
+            "n_categorical": len(cat_cols),
+        },
+        variables={},
+        page_key="feng",
+    )
+
     # ── Page Guide ────────────────────────────────────────────────────────
     st.divider()
     with st.expander("Page Guide & Explanation", expanded=False):

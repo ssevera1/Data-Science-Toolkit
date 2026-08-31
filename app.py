@@ -26,6 +26,30 @@ if theme_choice != st.session_state["app_theme"]:
     st.session_state["app_theme"] = theme_choice
     st.rerun()
 
+# ── AI Settings ──────────────────────────────────────────────────────────────
+with st.sidebar.expander("AI Settings", expanded=False):
+    _prev_key = st.session_state.get("gemini_api_key") or ""
+    _gemini_key = st.text_input(
+        "Gemini API Key",
+        type="password",
+        value=_prev_key,
+        help=(
+            "Optional. Enter a Google Gemini API key for AI-powered "
+            "interpretations. You can also set GEMINI_API_KEY in "
+            ".streamlit/secrets.toml or as an environment variable."
+        ),
+        key="_gemini_key_input",
+    )
+    if _gemini_key != _prev_key:
+        st.session_state["gemini_api_key"] = _gemini_key if _gemini_key else None
+        st.session_state["_gemini_cache"] = {}
+
+    from core.gemini import is_api_available
+    if is_api_available():
+        st.success("Gemini API connected", icon="✅")
+    else:
+        st.caption("No API key — clipboard fallback mode")
+
 # ── Styling & state init ─────────────────────────────────────────────────────
 from utils.theme import inject_global_css, register_plotly_theme, get_colors
 from core.state import init_state

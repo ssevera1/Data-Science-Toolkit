@@ -86,6 +86,16 @@ def render():
             fig = correlation_scatter(clean, var1, var2, r_value=result["rho"])
             st.plotly_chart(fig, width="stretch")
 
+        # ── AI Interpretation ──────────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        ai_texts = render_ai_interpretation(
+            entry_type="spearman_correlation",
+            result=result,
+            variables={"variable_x": var1, "variable_y": var2},
+            alpha=alpha,
+            page_key="spear",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────────
         st.divider()
         _log_entry = build_log_entry(
@@ -96,6 +106,10 @@ def render():
             alpha=alpha,
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include chart in PDF", value=True, key="spear_pdf_chart")
         if _include_chart:
             _fig = correlation_scatter(clean, var1, var2, r_value=result["rho"])

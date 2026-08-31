@@ -388,6 +388,20 @@ def render():
                     st.pyplot(fig)
                     plt.close()
 
+    # ── AI Interpretation ──────────────────────────────────────────────────
+    from components.ai_advisor import render_ai_interpretation
+    ai_texts = render_ai_interpretation(
+        entry_type="explainability",
+        result={
+            "model": model_choice,
+            "task": task,
+            "target": target,
+            "n_features": len(feature_cols),
+        },
+        variables={"target": target, "model": model_choice, "task": task},
+        page_key="expl",
+    )
+
     # ── PDF Export ─────────────────────────────────────────────────────────
     st.divider()
 
@@ -408,6 +422,10 @@ def render():
         variables={"target": target, "model": model_choice, "task": task},
         dataset_name=st.session_state.get("file_name", ""),
     )
+    if ai_texts.get("brief"):
+        _log_entry["ai_interpretation"] = ai_texts["brief"]
+    if ai_texts.get("deep_dive"):
+        _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
 
     _include_chart = st.checkbox("Include charts in PDF", value=True, key="exp_pdf_chart")
     if _include_chart:

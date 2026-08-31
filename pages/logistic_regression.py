@@ -128,6 +128,16 @@ def render():
                 total = len(y)
                 st.markdown(f"**Correctly classified:** {correct}/{total} ({correct/total:.1%})")
 
+        # ── AI Interpretation ──────────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        ai_texts = render_ai_interpretation(
+            entry_type="logistic_regression",
+            result=result,
+            variables={"dv": dv, "predictors": ", ".join(predictors)},
+            alpha=alpha,
+            page_key="log",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────────
         st.divider()
         _tables = [_serialize_df(result["coef_table"], "Coefficients")]
@@ -140,6 +150,10 @@ def render():
             alpha=alpha,
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include chart in PDF", value=True, key="log_pdf_chart")
         if _include_chart and len(predictors) == 1:
             _clean = df[[dv, predictors[0]]].dropna().copy()

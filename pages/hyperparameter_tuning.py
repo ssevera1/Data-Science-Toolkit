@@ -322,6 +322,23 @@ def render():
                 width="stretch",
             )
 
+        # ── AI Interpretation ──────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        ai_texts = render_ai_interpretation(
+            entry_type="hyperparameter_tuning",
+            result={
+                "model": _model_choice,
+                "task": _task,
+                "metric": _display_metric,
+                "best_score": _best_display,
+                "n_trials": len(_trial_history),
+                "cv_folds": cv_folds,
+                "best_params": _best_params,
+            },
+            variables={"target": target, "model": _model_choice, "task": _task},
+            page_key="hpt",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────
         st.divider()
         _tables = [_serialize_df(hist_df.drop(columns=["params"], errors="ignore"), "Trial History")]
@@ -343,6 +360,10 @@ def render():
             variables={"target": target, "model": _model_choice, "task": _task},
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include charts in PDF", value=True, key="hp_pdf_chart")
         if _include_chart:
             _hp_figures = [{"label": "Optimization History", "fig_dict": hist_fig.to_dict()}]

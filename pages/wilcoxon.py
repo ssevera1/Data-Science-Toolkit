@@ -97,6 +97,16 @@ def render():
                 fig = histogram_with_normal(diff, "Differences")
                 st.plotly_chart(fig, width="stretch")
 
+        # ── AI Interpretation ──────────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        ai_texts = render_ai_interpretation(
+            entry_type="wilcoxon",
+            result=result,
+            variables={"variable_1": var1, "variable_2": var2},
+            alpha=alpha,
+            page_key="wil",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────────
         st.divider()
         _log_entry = build_log_entry(
@@ -107,6 +117,10 @@ def render():
             alpha=alpha,
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include charts in PDF", value=True, key="wil_pdf_chart")
         if _include_chart:
             _figures = []

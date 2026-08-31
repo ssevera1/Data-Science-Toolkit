@@ -200,6 +200,18 @@ class _DSReport(FPDF):
         self.multi_cell(0, 5, _sanitize_text(text))
         self.ln(2)
 
+    def ai_interpretation_block(self, brief: str | None, deep_dive: str | None):
+        """Render AI interpretation text in the PDF."""
+        if not brief and not deep_dive:
+            return
+        self.sub_heading("AI Interpretation")
+        if brief:
+            self.body_text(brief)
+        if deep_dive:
+            self.sub_heading("Detailed Analysis")
+            self.body_text(deep_dive)
+        self.ln(3)
+
     def kv_line(self, label: str, value: str):
         label = _sanitize_text(label)
         value = _sanitize_text(value)
@@ -1194,6 +1206,11 @@ def generate_single_report(entry: dict, include_charts: bool = True) -> bytes:
     renderer = _RENDERERS.get(entry.get("entry_type", ""), _render_fallback)
     renderer(pdf, entry, include_charts)
 
+    # AI interpretation (appended after all renderers)
+    pdf.ai_interpretation_block(
+        entry.get("ai_interpretation"), entry.get("ai_deep_dive")
+    )
+
     return bytes(pdf.output())
 
 
@@ -1234,5 +1251,9 @@ def generate_full_report(
         pdf.add_page()
         renderer = _RENDERERS.get(entry.get("entry_type", ""), _render_fallback)
         renderer(pdf, entry, include_charts)
+        # AI interpretation (appended after all renderers)
+        pdf.ai_interpretation_block(
+            entry.get("ai_interpretation"), entry.get("ai_deep_dive")
+        )
 
     return bytes(pdf.output())

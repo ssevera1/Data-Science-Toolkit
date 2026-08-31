@@ -274,6 +274,21 @@ def render():
         else:
             st.info("No numeric columns found.")
 
+    # ── AI Interpretation ──────────────────────────────────────────────────
+    from components.ai_advisor import render_ai_interpretation
+    ai_texts = render_ai_interpretation(
+        entry_type="data_profiler",
+        result={
+            "n_rows": len(df),
+            "n_cols": df.shape[1],
+            "duplicates": int(num_dups),
+            "memory": mem_str,
+            "missing_pct": missing_pct_str,
+        },
+        variables={},
+        page_key="prof",
+    )
+
     # ── PDF Export ─────────────────────────────────────────────────────────
     st.divider()
     _tables = [_serialize_df(desc_stats_df, "Descriptive Statistics")]
@@ -298,6 +313,10 @@ def render():
         variables={},
         dataset_name=st.session_state.get("file_name", ""),
     )
+    if ai_texts.get("brief"):
+        _log_entry["ai_interpretation"] = ai_texts["brief"]
+    if ai_texts.get("deep_dive"):
+        _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
 
     _include_chart = st.checkbox("Include charts in PDF", value=True, key="prof_pdf_chart")
     if _include_chart:

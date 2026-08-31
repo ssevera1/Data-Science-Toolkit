@@ -95,6 +95,16 @@ def render():
                 fig_qq = qq_plot(series, var)
                 st.plotly_chart(fig_qq, width="stretch")
 
+        # ── AI Interpretation ──────────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        ai_texts = render_ai_interpretation(
+            entry_type="one_sample_ttest",
+            result=result,
+            variables={"test_variable": var, "test_value": str(test_value)},
+            alpha=alpha,
+            page_key="os",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────────
         st.divider()
         _log_entry = build_log_entry(
@@ -105,6 +115,10 @@ def render():
             alpha=alpha,
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include charts in PDF", value=True, key="os_pdf_chart")
         if _include_chart:
             _fig_box = single_boxplot(series, var, title=f"{var} (test value = {test_value})")

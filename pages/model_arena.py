@@ -361,6 +361,25 @@ def render():
                     )
                     st.plotly_chart(fig, width="stretch")
 
+        # ── AI Interpretation ──────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        _has_primary_ai = primary in res_df.columns and not res_df.dropna(subset=[primary]).empty
+        _best_name_ai = res_df.dropna(subset=[primary]).iloc[0]["Model"] if _has_primary_ai else (res_df.iloc[0]["Model"] if len(res_df) > 0 else "N/A")
+        _best_score_ai = res_df.dropna(subset=[primary]).iloc[0][primary] if _has_primary_ai else None
+        ai_texts = render_ai_interpretation(
+            entry_type="model_arena",
+            result={
+                "task": _task,
+                "best_model": _best_name_ai,
+                "primary_metric": primary,
+                "best_score": _best_score_ai,
+                "n_models": len(selected_models),
+                "cv_folds": cv_folds,
+            },
+            variables={"target": target, "task": _task, "cv_folds": str(cv_folds)},
+            page_key="arena",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────
         st.divider()
         _has_primary = primary in res_df.columns and not res_df.dropna(subset=[primary]).empty
@@ -381,6 +400,10 @@ def render():
             variables={"target": target, "task": _task, "cv_folds": str(cv_folds)},
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include charts in PDF", value=True, key="arena_pdf_chart")
         if _include_chart and _has_primary:
             _figures = []

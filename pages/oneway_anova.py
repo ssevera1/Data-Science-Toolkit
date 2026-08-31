@@ -109,6 +109,16 @@ def render():
                 fig_bar = group_means_bar(clean, dv, group)
                 st.plotly_chart(fig_bar, width="stretch")
 
+        # ── AI Interpretation ──────────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        ai_texts = render_ai_interpretation(
+            entry_type="oneway_anova",
+            result=result,
+            variables={"dependent_variable": dv, "factor": group},
+            alpha=alpha,
+            page_key="ow",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────────
         st.divider()
         _tables = [
@@ -127,6 +137,10 @@ def render():
             alpha=alpha,
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include charts in PDF", value=True, key="ow_pdf_chart")
         if _include_chart:
             _fig_box = grouped_boxplot(clean, dv, group)

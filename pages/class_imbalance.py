@@ -379,6 +379,21 @@ def render():
                 st.success("Dataset updated with resampled data.")
                 st.rerun()
 
+        # ── AI Interpretation ──────────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        ai_texts = render_ai_interpretation(
+            entry_type="class_imbalance",
+            result={
+                "target": target,
+                "method": method,
+                "imbalance_ratio": cached["imbalance_ratio"],
+                "rows_before": cached["rows_before"],
+                "rows_after": cached["rows_after"],
+            },
+            variables={"target": target, "method": method},
+            page_key="cimb",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────────
         st.divider()
         _log_entry = build_log_entry(
@@ -398,6 +413,10 @@ def render():
             variables={"target": target, "method": method},
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include chart in PDF", value=True, key="ci_pdf_chart")
         if _include_chart:
             _fig = px.bar(compare, x="Class", y="Count", color="Stage", barmode="group",

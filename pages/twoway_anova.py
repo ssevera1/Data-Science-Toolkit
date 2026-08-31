@@ -94,6 +94,16 @@ def render():
             fig = two_way_bar(clean, dv, factor1, factor2)
             st.plotly_chart(fig, width="stretch")
 
+        # ── AI Interpretation ──────────────────────────────────────────
+        from components.ai_advisor import render_ai_interpretation
+        ai_texts = render_ai_interpretation(
+            entry_type="twoway_anova",
+            result=result,
+            variables={"dv": dv, "factor_1": factor1, "factor_2": factor2},
+            alpha=alpha,
+            page_key="tw",
+        )
+
         # ── PDF Export ─────────────────────────────────────────────────
         st.divider()
         _tables = [_serialize_df(result["anova_table"], "ANOVA Table")]
@@ -108,6 +118,10 @@ def render():
             alpha=alpha,
             dataset_name=st.session_state.get("file_name", ""),
         )
+        if ai_texts.get("brief"):
+            _log_entry["ai_interpretation"] = ai_texts["brief"]
+        if ai_texts.get("deep_dive"):
+            _log_entry["ai_deep_dive"] = ai_texts["deep_dive"]
         _include_chart = st.checkbox("Include chart in PDF", value=True, key="tw_pdf_chart")
         if _include_chart:
             _fig = two_way_bar(clean, dv, factor1, factor2)

@@ -40,3 +40,6 @@ CLAUDE.md
 # Original app subdirectories
 DS_App/
 Stats_App/
+
+# Streamlit secrets: the Gemini key lives here at runtime, never in git.
+.streamlit/secrets.toml
