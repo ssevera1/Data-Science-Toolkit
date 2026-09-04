@@ -29,6 +29,9 @@ def validate_groups(metric_col, group_col, min_groups=2, max_groups=None):
     clean[metric_col] = pd.to_numeric(clean[metric_col], errors="coerce")
     clean = clean.dropna()
 
+    if len(clean) < 2:
+        return False, f"Insufficient data after numeric coercion in '{metric_col}' and '{group_col}'."
+
     groups = clean[group_col].unique()
     n_groups = len(groups)
 
@@ -119,4 +122,7 @@ def coerce_numeric(df, columns):
     """Coerce specified columns to numeric."""
     for c in columns:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    return df.dropna(subset=columns)
+    result = df.dropna(subset=columns)
+    if len(result) < 2:
+        raise ValueError(f"Insufficient data after numeric coercion: {len(result)} rows remain (minimum 2 required).")
+    return result
