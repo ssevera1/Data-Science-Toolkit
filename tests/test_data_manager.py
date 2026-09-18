@@ -7,7 +7,7 @@ import pytest
 import streamlit as st
 
 from core import constants
-from core.data_manager import _auto_detect_type, add_column, load_csv
+from core.data_manager import _apply_loaded_df, _auto_detect_type, add_column, load_csv
 
 
 @pytest.fixture(autouse=True)
@@ -72,6 +72,33 @@ def test_load_csv_detects_every_column():
     assert types["num"] == constants.METRIC
     assert types["grp"] == constants.NOMINAL
     assert types["label"] == constants.NOMINAL
+
+
+def test_load_csv_with_header_only_still_loads_and_pads_rows():
+    # A CSV with columns but no data rows (e.g. a fresh export template) must
+    # still load so the user can type values into the padded editor rows.
+    csv = "num,grp,label\n"
+    ok, err = load_csv(io.StringIO(csv))
+
+    assert (ok, err) == (True, None)
+    df = st.session_state["df"]
+    assert list(df.columns) == ["num", "grp", "label"]
+    assert len(df) == 20
+
+
+def test_apply_loaded_df_rejects_dataframe_with_no_columns():
+    with pytest.raises(ValueError):
+        _apply_loaded_df(pd.DataFrame())
+
+
+def test_load_csv_with_no_columns_reports_specific_error_not_generic_one():
+    # A ValueError raised while applying the loaded frame must reach the
+    # caller verbatim instead of being swallowed by the catch-all Exception
+    # handler and replaced with the generic format-error message.
+    ok, err = load_csv(io.StringIO(""))
+
+    assert ok is False
+    assert err != "Unable to load CSV file. Please check the format."
 
 
 def test_add_column_marks_the_new_column_as_metric():

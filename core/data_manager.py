@@ -1,11 +1,14 @@
 """Data loading, export, and column management."""
 
 import io
+import logging
 import pandas as pd
 import numpy as np
 import streamlit as st
 from core.state import set_df, get_df, get_var_types, set_var_type
 from core import constants
+
+logger = logging.getLogger(__name__)
 
 
 def load_csv(uploaded_file):
@@ -14,6 +17,8 @@ def load_csv(uploaded_file):
         df = pd.read_csv(uploaded_file, low_memory=False)
         _apply_loaded_df(df)
         return True, None
+    except ValueError as e:
+        return False, str(e)
     except Exception:
         return False, "Unable to load CSV file. Please check the format."
 
@@ -24,6 +29,8 @@ def load_excel(uploaded_file):
         df = pd.read_excel(uploaded_file)
         _apply_loaded_df(df)
         return True, None
+    except ValueError as e:
+        return False, str(e)
     except Exception:
         return False, "Unable to load Excel file. Please check the format."
 
@@ -41,12 +48,24 @@ def load_from_paste(text):
             df = pd.read_csv(io.StringIO(text), sep=";")
         _apply_loaded_df(df)
         return True, None
+    except ValueError as e:
+        return False, str(e)
     except Exception:
         return False, "Unable to parse pasted data. Please check the format."
 
 
 def _apply_loaded_df(df):
     """Apply a loaded DataFrame to session state."""
+    # Validate minimum data dimensions
+    if len(df.columns) == 0:
+        logger.warning("Malformed upload: shape=%s", df.shape)
+        raise ValueError("Uploaded data is empty or has no columns.")
+
+    if len(df) == 0:
+        logger.warning("No data rows in upload, only columns: %s", list(df.columns))
+
+    logger.debug("Loaded DataFrame: shape=%s, columns=%s", df.shape, list(df.columns))
+
     # Pad with empty rows so user can add more data
     if len(df) < 20:
         extra = pd.DataFrame(
@@ -65,6 +84,7 @@ def _auto_detect_type(col, df):
     """Auto-detect variable type for a column."""
     series = df[col].dropna()
     if len(series) == 0:
+        logger.debug("Column '%s': empty, assigned METRIC", col)
         set_var_type(col, constants.METRIC)
         return
 
@@ -75,13 +95,17 @@ def _auto_detect_type(col, df):
     if non_null_numeric / len(series) > 0.5:
         n_unique = numeric.dropna().nunique()
         if n_unique <= 2:
+            logger.debug("Column '%s': %d unique numeric values, assigned NOMINAL", col, n_unique)
             set_var_type(col, constants.NOMINAL)
         elif n_unique <= 7 and n_unique < len(series) * 0.3:
+            logger.debug("Column '%s': %d unique numeric values (sparse), assigned ORDINAL", col, n_unique)
             set_var_type(col, constants.ORDINAL)
         else:
+            logger.debug("Column '%s': %d unique numeric values, assigned METRIC", col, n_unique)
             set_var_type(col, constants.METRIC)
     else:
         # Non-numeric columns are Nominal regardless of cardinality.
+        logger.debug("Column '%s': non-numeric (%.1f%% coercible), assigned NOMINAL", col, 100 * non_null_numeric / len(series))
         set_var_type(col, constants.NOMINAL)
 
 
