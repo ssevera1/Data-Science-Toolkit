@@ -17,6 +17,8 @@ def load_csv(uploaded_file):
         df = pd.read_csv(uploaded_file, low_memory=False)
         _apply_loaded_df(df)
         return True, None
+    except ValueError as e:
+        return False, str(e)
     except Exception:
         return False, "Unable to load CSV file. Please check the format."
 
@@ -27,6 +29,8 @@ def load_excel(uploaded_file):
         df = pd.read_excel(uploaded_file)
         _apply_loaded_df(df)
         return True, None
+    except ValueError as e:
+        return False, str(e)
     except Exception:
         return False, "Unable to load Excel file. Please check the format."
 
@@ -44,6 +48,8 @@ def load_from_paste(text):
             df = pd.read_csv(io.StringIO(text), sep=";")
         _apply_loaded_df(df)
         return True, None
+    except ValueError as e:
+        return False, str(e)
     except Exception:
         return False, "Unable to parse pasted data. Please check the format."
 
@@ -51,15 +57,15 @@ def load_from_paste(text):
 def _apply_loaded_df(df):
     """Apply a loaded DataFrame to session state."""
     # Validate minimum data dimensions
-    if df.empty or len(df.columns) == 0:
-        logger.warning("Empty or malformed upload: shape=%s", df.shape)
+    if len(df.columns) == 0:
+        logger.warning("Malformed upload: shape=%s", df.shape)
         raise ValueError("Uploaded data is empty or has no columns.")
-    
+
     if len(df) == 0:
         logger.warning("No data rows in upload, only columns: %s", list(df.columns))
-    
+
     logger.debug("Loaded DataFrame: shape=%s, columns=%s", df.shape, list(df.columns))
-    
+
     # Pad with empty rows so user can add more data
     if len(df) < 20:
         extra = pd.DataFrame(
