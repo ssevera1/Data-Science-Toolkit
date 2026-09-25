@@ -1,15 +1,20 @@
 """Input validation for statistical tests."""
 
+import logging
 import pandas as pd
 import numpy as np
 from core.state import get_df, get_var_type
+
+logger = logging.getLogger(__name__)
 
 
 def validate_column_exists(col_name):
     """Check if column exists in the DataFrame."""
     df = get_df()
     if col_name not in df.columns:
+        logger.debug(f"Column validation failed: '{col_name}' not found in columns {list(df.columns)}")
         return False, f"Column '{col_name}' not found."
+    logger.debug(f"Column validation passed: '{col_name}' exists")
     return True, None
 
 
@@ -17,8 +22,11 @@ def validate_metric(col_name):
     """Validate that a column has numeric data."""
     df = get_df()
     series = pd.to_numeric(df[col_name], errors="coerce").dropna()
+    logger.debug(f"Metric validation for '{col_name}': {len(series)} numeric values after coercion")
     if len(series) < 2:
+        logger.debug(f"Metric validation failed: '{col_name}' has {len(series)} numeric values (minimum 2 required)")
         return False, f"'{col_name}' needs at least 2 numeric values."
+    logger.debug(f"Metric validation passed: '{col_name}' has {len(series)} valid numeric values")
     return True, None
 
 
@@ -29,24 +37,34 @@ def validate_groups(metric_col, group_col, min_groups=2, max_groups=None):
     clean[metric_col] = pd.to_numeric(clean[metric_col], errors="coerce")
     clean = clean.dropna()
 
+    logger.debug(f"Groups validation for metric='{metric_col}', group_col='{group_col}': {len(clean)} rows after coercion")
+
     if len(clean) < 2:
+        logger.debug(f"Groups validation failed: insufficient data, {len(clean)} rows after numeric coercion (minimum 2 required)")
         return False, f"Insufficient data after numeric coercion in '{metric_col}' and '{group_col}'."
 
     groups = clean[group_col].unique()
     n_groups = len(groups)
 
+    logger.debug(f"Groups validation: found {n_groups} groups: {list(groups)}")
+
     if n_groups < min_groups:
+        logger.debug(f"Groups validation failed: {n_groups} groups found, minimum {min_groups} required")
         return False, f"'{group_col}' needs at least {min_groups} groups, found {n_groups}."
 
     if max_groups and n_groups > max_groups:
+        logger.debug(f"Groups validation failed: {n_groups} groups found, maximum {max_groups} allowed")
         return False, f"'{group_col}' has {n_groups} groups, maximum is {max_groups}."
 
     # Check each group has enough data
     for g in groups:
         n = len(clean[clean[group_col] == g])
+        logger.debug(f"Group '{g}' has {n} observations")
         if n < 2:
+            logger.debug(f"Groups validation failed: group '{g}' has {n} observations (minimum 2 required)")
             return False, f"Group '{g}' in '{group_col}' has fewer than 2 observations."
 
+    logger.debug(f"Groups validation passed: {n_groups} groups with sufficient observations")
     return True, None
 
 
@@ -58,8 +76,11 @@ def validate_two_metrics(col1, col2):
     clean[col2] = pd.to_numeric(clean[col2], errors="coerce")
     clean = clean.dropna()
 
+    logger.debug(f"Two metrics validation for '{col1}' and '{col2}': {len(clean)} paired observations after coercion")
     if len(clean) < 3:
+        logger.debug(f"Two metrics validation failed: {len(clean)} paired observations (minimum 3 required)")
         return False, f"Need at least 3 paired observations, found {len(clean)}."
+    logger.debug(f"Two metrics validation passed: {len(clean)} paired observations")
     return True, None
 
 
@@ -67,8 +88,11 @@ def validate_binary(col_name):
     """Validate that a column has exactly 2 unique non-null values."""
     df = get_df()
     values = df[col_name].dropna().unique()
+    logger.debug(f"Binary validation for '{col_name}': found {len(values)} unique values {list(values)}")
     if len(values) != 2:
+        logger.debug(f"Binary validation failed: {len(values)} unique values found (exactly 2 required)")
         return False, f"'{col_name}' must have exactly 2 categories, found {len(values)}."
+    logger.debug(f"Binary validation passed: '{col_name}' has exactly 2 categories")
     return True, None
 
 
@@ -76,8 +100,11 @@ def validate_nominal(col_name, min_categories=2):
     """Validate a nominal variable."""
     df = get_df()
     values = df[col_name].dropna().unique()
+    logger.debug(f"Nominal validation for '{col_name}': found {len(values)} categories (minimum {min_categories} required)")
     if len(values) < min_categories:
+        logger.debug(f"Nominal validation failed: {len(values)} categories found, minimum {min_categories} required")
         return False, f"'{col_name}' needs at least {min_categories} categories, found {len(values)}."
+    logger.debug(f"Nominal validation passed: '{col_name}' has {len(values)} categories")
     return True, None
 
 
@@ -87,17 +114,23 @@ def validate_survival_inputs(time_col, event_col):
 
     # Time: numeric and non-negative
     time_vals = pd.to_numeric(df[time_col], errors="coerce").dropna()
+    logger.debug(f"Survival validation for time_col='{time_col}': {len(time_vals)} numeric time values")
     if len(time_vals) < 2:
+        logger.debug(f"Survival validation failed: '{time_col}' has {len(time_vals)} numeric values (minimum 2 required)")
         return False, f"'{time_col}' needs at least 2 numeric values."
     if (time_vals < 0).any():
+        logger.debug(f"Survival validation failed: '{time_col}' contains negative values")
         return False, f"'{time_col}' contains negative values. Time must be non-negative."
 
     # Event: binary 0/1 only
     event_vals = pd.to_numeric(df[event_col], errors="coerce").dropna()
     unique_events = set(event_vals.unique())
+    logger.debug(f"Survival validation for event_col='{event_col}': {len(event_vals)} event values, unique: {unique_events}")
     if not unique_events.issubset({0, 1, 0.0, 1.0}):
+        logger.debug(f"Survival validation failed: '{event_col}' contains non-binary values {unique_events}")
         return False, f"'{event_col}' must contain only 0 (censored) and 1 (event) values."
     if 1 not in unique_events and 1.0 not in unique_events:
+        logger.debug(f"Survival validation failed: '{event_col}' has no events (no 1 values)")
         return False, f"'{event_col}' has no events (no 1 values). Need at least one event."
 
     # Check at least 2 complete pairs
@@ -105,9 +138,12 @@ def validate_survival_inputs(time_col, event_col):
     clean[time_col] = pd.to_numeric(clean[time_col], errors="coerce")
     clean[event_col] = pd.to_numeric(clean[event_col], errors="coerce")
     clean = clean.dropna()
+    logger.debug(f"Survival validation: {len(clean)} complete time-event pairs after coercion")
     if len(clean) < 2:
+        logger.debug(f"Survival validation failed: {len(clean)} complete pairs (minimum 2 required)")
         return False, "Need at least 2 complete time-event pairs."
 
+    logger.debug(f"Survival validation passed: time_col='{time_col}', event_col='{event_col}'")
     return True, None
 
 
@@ -123,6 +159,8 @@ def coerce_numeric(df, columns):
     for c in columns:
         df[c] = pd.to_numeric(df[c], errors="coerce")
     result = df.dropna(subset=columns)
+    logger.debug(f"Coerce numeric for columns {columns}: {len(result)} rows after coercion")
     if len(result) < 2:
+        logger.debug(f"Coerce numeric failed: {len(result)} rows remain (minimum 2 required)")
         raise ValueError(f"Insufficient data after numeric coercion: {len(result)} rows remain (minimum 2 required).")
     return result
