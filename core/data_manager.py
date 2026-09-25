@@ -11,13 +11,22 @@ from core import constants
 logger = logging.getLogger(__name__)
 
 
+class DataValidationError(ValueError):
+    """Raised when a loaded frame fails our own validation.
+
+    Kept distinct from ValueError so the loaders can surface this message to
+    the user while pandas parser errors (ParserError, EmptyDataError, and the
+    plain ValueErrors read_excel raises) keep their generic format message.
+    """
+
+
 def load_csv(uploaded_file):
     """Load data from a CSV file."""
     try:
         df = pd.read_csv(uploaded_file, low_memory=False)
         _apply_loaded_df(df)
         return True, None
-    except ValueError as e:
+    except DataValidationError as e:
         return False, str(e)
     except Exception:
         return False, "Unable to load CSV file. Please check the format."
@@ -29,7 +38,7 @@ def load_excel(uploaded_file):
         df = pd.read_excel(uploaded_file)
         _apply_loaded_df(df)
         return True, None
-    except ValueError as e:
+    except DataValidationError as e:
         return False, str(e)
     except Exception:
         return False, "Unable to load Excel file. Please check the format."
@@ -48,7 +57,7 @@ def load_from_paste(text):
             df = pd.read_csv(io.StringIO(text), sep=";")
         _apply_loaded_df(df)
         return True, None
-    except ValueError as e:
+    except DataValidationError as e:
         return False, str(e)
     except Exception:
         return False, "Unable to parse pasted data. Please check the format."
@@ -59,7 +68,7 @@ def _apply_loaded_df(df):
     # Validate minimum data dimensions
     if len(df.columns) == 0:
         logger.warning("Malformed upload: shape=%s", df.shape)
-        raise ValueError("Uploaded data is empty or has no columns.")
+        raise DataValidationError("Uploaded data is empty or has no columns.")
 
     if len(df) == 0:
         logger.warning("No data rows in upload, only columns: %s", list(df.columns))

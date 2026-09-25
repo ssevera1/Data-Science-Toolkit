@@ -7,7 +7,13 @@ import pytest
 import streamlit as st
 
 from core import constants
-from core.data_manager import _apply_loaded_df, _auto_detect_type, add_column, load_csv
+from core.data_manager import (
+    DataValidationError,
+    _apply_loaded_df,
+    _auto_detect_type,
+    add_column,
+    load_csv,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -87,18 +93,27 @@ def test_load_csv_with_header_only_still_loads_and_pads_rows():
 
 
 def test_apply_loaded_df_rejects_dataframe_with_no_columns():
-    with pytest.raises(ValueError):
+    with pytest.raises(DataValidationError):
         _apply_loaded_df(pd.DataFrame())
 
 
-def test_load_csv_with_no_columns_reports_specific_error_not_generic_one():
-    # A ValueError raised while applying the loaded frame must reach the
-    # caller verbatim instead of being swallowed by the catch-all Exception
-    # handler and replaced with the generic format-error message.
+def test_load_csv_surfaces_validation_error_verbatim(monkeypatch):
+    # An empty string never reaches _apply_loaded_df (pandas raises
+    # EmptyDataError first), so stub the parser to return a zero-column frame
+    # and check that our own validation message reaches the caller intact.
+    monkeypatch.setattr(pd, "read_csv", lambda *a, **k: pd.DataFrame())
+
+    ok, err = load_csv(io.StringIO("ignored"))
+
+    assert (ok, err) == (False, "Uploaded data is empty or has no columns.")
+
+
+def test_load_csv_keeps_generic_message_for_pandas_parser_errors():
+    # pandas.errors.EmptyDataError and ParserError subclass ValueError. They
+    # must stay on the generic path rather than leaking raw parser text.
     ok, err = load_csv(io.StringIO(""))
 
-    assert ok is False
-    assert err != "Unable to load CSV file. Please check the format."
+    assert (ok, err) == (False, "Unable to load CSV file. Please check the format.")
 
 
 def test_add_column_marks_the_new_column_as_metric():
