@@ -11,6 +11,12 @@ logger = logging.getLogger(__name__)
 def validate_column_exists(col_name):
     """Check if column exists in the DataFrame."""
     df = get_df()
+    
+    # Fail fast on empty or all-NaN DataFrame
+    if df.empty or df.isna().all().all():
+        logger.debug("Column validation failed: DataFrame is empty or all values are NaN")
+        return False, "DataFrame is empty or contains only NaN values."
+    
     if col_name not in df.columns:
         logger.debug(f"Column validation failed: '{col_name}' not found in columns {list(df.columns)}")
         return False, f"Column '{col_name}' not found."
