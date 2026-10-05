@@ -8,15 +8,22 @@ from core.state import get_df, get_var_type
 logger = logging.getLogger(__name__)
 
 
+def _check_df_not_empty(df):
+    """Return a failure tuple if df is empty or all-NaN, else None."""
+    if df.empty or df.isna().all().all():
+        logger.debug("Validation failed: DataFrame is empty or all values are NaN")
+        return False, "DataFrame is empty or contains only NaN values."
+    return None
+
+
 def validate_column_exists(col_name):
     """Check if column exists in the DataFrame."""
     df = get_df()
-    
-    # Fail fast on empty or all-NaN DataFrame
-    if df.empty or df.isna().all().all():
-        logger.debug("Column validation failed: DataFrame is empty or all values are NaN")
-        return False, "DataFrame is empty or contains only NaN values."
-    
+
+    empty_check = _check_df_not_empty(df)
+    if empty_check:
+        return empty_check
+
     if col_name not in df.columns:
         logger.debug(f"Column validation failed: '{col_name}' not found in columns {list(df.columns)}")
         return False, f"Column '{col_name}' not found."
@@ -27,6 +34,9 @@ def validate_column_exists(col_name):
 def validate_metric(col_name):
     """Validate that a column has numeric data."""
     df = get_df()
+    empty_check = _check_df_not_empty(df)
+    if empty_check:
+        return empty_check
     series = pd.to_numeric(df[col_name], errors="coerce").dropna()
     logger.debug(f"Metric validation for '{col_name}': {len(series)} numeric values after coercion")
     if len(series) < 2:
@@ -39,6 +49,9 @@ def validate_metric(col_name):
 def validate_groups(metric_col, group_col, min_groups=2, max_groups=None):
     """Validate grouping variable has the right number of groups with data."""
     df = get_df()
+    empty_check = _check_df_not_empty(df)
+    if empty_check:
+        return empty_check
     clean = df[[metric_col, group_col]].dropna()
     clean[metric_col] = pd.to_numeric(clean[metric_col], errors="coerce")
     clean = clean.dropna()
@@ -77,6 +90,9 @@ def validate_groups(metric_col, group_col, min_groups=2, max_groups=None):
 def validate_two_metrics(col1, col2):
     """Validate two metric columns have paired data."""
     df = get_df()
+    empty_check = _check_df_not_empty(df)
+    if empty_check:
+        return empty_check
     clean = df[[col1, col2]].copy()
     clean[col1] = pd.to_numeric(clean[col1], errors="coerce")
     clean[col2] = pd.to_numeric(clean[col2], errors="coerce")
@@ -117,6 +133,9 @@ def validate_nominal(col_name, min_categories=2):
 def validate_survival_inputs(time_col, event_col):
     """Validate survival analysis time and event columns."""
     df = get_df()
+    empty_check = _check_df_not_empty(df)
+    if empty_check:
+        return empty_check
 
     # Time: numeric and non-negative
     time_vals = pd.to_numeric(df[time_col], errors="coerce").dropna()
