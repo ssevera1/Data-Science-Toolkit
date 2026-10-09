@@ -8,21 +8,6 @@ from core.data_manager import load_csv, load_excel, load_from_paste, add_column,
 from core.constants import VARIABLE_TYPES
 
 
-def _validate_dataframe(df):
-    """Validate that DataFrame is not empty or all-NaN.
-    
-    Returns:
-        tuple: (is_valid: bool, error_message: str or None)
-    """
-    if df is None or df.empty:
-        return False, "DataFrame is empty. Please upload or enter data first."
-    
-    if df.isna().all().all():
-        return False, "DataFrame contains only missing values (NaN). Please enter valid data."
-    
-    return True, None
-
-
 def render():
     st.title("Data Input")
     st.markdown("Enter your data manually, upload a file, or paste from a spreadsheet.")
@@ -65,12 +50,14 @@ def render():
                     else:
                         st.error(f"Error: {err}")
 
-    # --- Validate DataFrame ---
     df = get_df()
-    is_valid, error_msg = _validate_dataframe(df)
-    if not is_valid:
-        st.warning(error_msg)
+
+    if df is None or len(df.columns) == 0:
+        st.info("No data yet. Upload a file or paste data above to get started.")
         return
+
+    if df.isna().all().all():
+        st.info("No data yet. Start typing in the table below, or upload / paste data above.")
 
     # --- Variable Types ---
     st.subheader("Variable Types")
