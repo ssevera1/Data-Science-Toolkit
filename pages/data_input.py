@@ -50,9 +50,17 @@ def render():
                     else:
                         st.error(f"Error: {err}")
 
+    df = get_df()
+
+    if df is None or len(df.columns) == 0:
+        st.info("No data yet. Upload a file or paste data above to get started.")
+        return
+
+    if df.isna().all().all():
+        st.info("No data yet. Start typing in the table below, or upload / paste data above.")
+
     # --- Variable Types ---
     st.subheader("Variable Types")
-    df = get_df()
     cols = st.columns(min(len(df.columns), 6))
 
     for i, col in enumerate(df.columns):
@@ -132,4 +140,3 @@ Each column is assigned one of three types. The type you choose determines which
 #### Shared Data
 Data entered or imported on this page is **shared across all Data Science and Statistics tools** in the application. Any changes you make here are immediately available on every other page.
         """)
-
