@@ -130,6 +130,24 @@ def validate_nominal(col_name, min_categories=2):
     return True, None
 
 
+def validate_categorical(col_name):
+    """Validate a categorical column, ensuring sufficient sample size after coercion."""
+    df = get_df()
+    empty_check = _check_df_not_empty(df)
+    if empty_check:
+        return empty_check
+    
+    clean = pd.to_numeric(df[col_name], errors="coerce").dropna()
+    logger.debug(f"Categorical validation for '{col_name}': {len(clean)} values after numeric coercion")
+    
+    if len(clean) < 2:
+        logger.debug(f"Categorical validation failed: '{col_name}' has {len(clean)} values after coercion (minimum 2 required)")
+        return False, f"'{col_name}' needs at least 2 valid values after coercion."
+    
+    logger.debug(f"Categorical validation passed: '{col_name}' has {len(clean)} valid values")
+    return True, None
+
+
 def validate_survival_inputs(time_col, event_col):
     """Validate survival analysis time and event columns."""
     df = get_df()
