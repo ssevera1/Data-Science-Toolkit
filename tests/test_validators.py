@@ -5,6 +5,7 @@ import pytest
 import streamlit as st
 
 from core.validators import (
+    validate_categorical,
     validate_column_exists,
     validate_groups,
     validate_survival_inputs,
@@ -70,3 +71,15 @@ def test_validate_survival_inputs_rejects_all_nan_df():
 def test_validate_column_exists_rejects_all_nan_df():
     set_df(pd.DataFrame({"col": [None, None]}))
     assert validate_column_exists("col") == (False, EMPTY_MESSAGE)
+
+
+def test_validate_categorical_accepts_string_values():
+    set_df(pd.DataFrame({"col": ["red", "blue", "green", "red", "blue"]}))
+    assert validate_categorical("col") == (True, None)
+
+
+def test_validate_categorical_rejects_too_few_values():
+    set_df(pd.DataFrame({"col": ["red", None]}))
+    ok, msg = validate_categorical("col")
+    assert ok is False
+    assert "at least 2 valid values" in msg
