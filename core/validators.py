@@ -130,8 +130,8 @@ def validate_nominal(col_name, min_categories=2):
     return True, None
 
 
-def validate_categorical(col_name):
-    """Validate a categorical column, ensuring sufficient sample size."""
+def validate_categorical(col_name, min_category_size=1):
+    """Validate a categorical column, ensuring sufficient sample size and category distribution."""
     df = get_df()
     empty_check = _check_df_not_empty(df)
     if empty_check:
@@ -144,7 +144,20 @@ def validate_categorical(col_name):
         logger.debug(f"Categorical validation failed: '{col_name}' has {len(clean)} non-null values (minimum 2 required)")
         return False, f"'{col_name}' needs at least 2 valid values."
 
-    logger.debug(f"Categorical validation passed: '{col_name}' has {len(clean)} valid values")
+    value_counts = clean.value_counts()
+    n_categories = len(value_counts)
+    logger.debug(f"Categorical validation: '{col_name}' has {n_categories} unique categories")
+
+    if n_categories < 2:
+        logger.debug(f"Categorical validation failed: '{col_name}' has {n_categories} unique category (minimum 2 required)")
+        return False, f"'{col_name}' must have at least 2 unique categories, found {n_categories}."
+
+    undersized_categories = (value_counts < min_category_size).sum()
+    if undersized_categories > 0:
+        logger.debug(f"Categorical validation failed: '{col_name}' has {undersized_categories} categories with fewer than {min_category_size} observations")
+        return False, f"'{col_name}' has {undersized_categories} categories with fewer than {min_category_size} observations."
+
+    logger.debug(f"Categorical validation passed: '{col_name}' has {len(clean)} valid values in {n_categories} categories")
     return True, None
 
 
