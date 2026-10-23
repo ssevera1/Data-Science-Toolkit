@@ -74,7 +74,7 @@ def test_validate_column_exists_rejects_all_nan_df():
 
 
 def test_validate_categorical_accepts_string_values():
-    set_df(pd.DataFrame({"col": ["red", "blue", "green", "red", "blue"]}))
+    set_df(pd.DataFrame({"col": ["red", "blue", "green", "red", "blue", "green"]}))
     assert validate_categorical("col") == (True, None)
 
 
@@ -83,3 +83,21 @@ def test_validate_categorical_rejects_too_few_values():
     ok, msg = validate_categorical("col")
     assert ok is False
     assert "at least 2 valid values" in msg
+
+
+def test_validate_categorical_accepts_single_category_with_enough_observations():
+    set_df(pd.DataFrame({"col": ["red", "red", "red"]}))
+    assert validate_categorical("col") == (True, None)
+
+
+def test_validate_categorical_rejects_undersized_category():
+    set_df(pd.DataFrame({"col": ["red", "red", "blue"]}))
+    ok, msg = validate_categorical("col", min_category_size=2)
+    assert ok is False
+    assert "1 category with fewer than 2 observations" in msg
+    assert "blue" in msg
+
+
+def test_validate_categorical_accepts_all_categories_meeting_min_size():
+    set_df(pd.DataFrame({"col": ["red", "red", "blue", "blue"]}))
+    assert validate_categorical("col", min_category_size=2) == (True, None)
