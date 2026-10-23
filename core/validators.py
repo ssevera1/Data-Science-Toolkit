@@ -130,7 +130,7 @@ def validate_nominal(col_name, min_categories=2):
     return True, None
 
 
-def validate_categorical(col_name, min_category_size=1):
+def validate_categorical(col_name, min_category_size=2):
     """Validate a categorical column, ensuring sufficient sample size and category distribution."""
     df = get_df()
     empty_check = _check_df_not_empty(df)
@@ -145,17 +145,15 @@ def validate_categorical(col_name, min_category_size=1):
         return False, f"'{col_name}' needs at least 2 valid values."
 
     value_counts = clean.value_counts()
+    value_counts = value_counts[value_counts > 0]
     n_categories = len(value_counts)
     logger.debug(f"Categorical validation: '{col_name}' has {n_categories} unique categories")
 
-    if n_categories < 2:
-        logger.debug(f"Categorical validation failed: '{col_name}' has {n_categories} unique category (minimum 2 required)")
-        return False, f"'{col_name}' must have at least 2 unique categories, found {n_categories}."
-
-    undersized_categories = (value_counts < min_category_size).sum()
-    if undersized_categories > 0:
-        logger.debug(f"Categorical validation failed: '{col_name}' has {undersized_categories} categories with fewer than {min_category_size} observations")
-        return False, f"'{col_name}' has {undersized_categories} categories with fewer than {min_category_size} observations."
+    undersized = value_counts[value_counts < min_category_size]
+    if len(undersized) > 0:
+        category_word = "category" if len(undersized) == 1 else "categories"
+        logger.debug(f"Categorical validation failed: '{col_name}' has {len(undersized)} {category_word} with fewer than {min_category_size} observations: {list(undersized.index)}")
+        return False, f"'{col_name}' has {len(undersized)} {category_word} with fewer than {min_category_size} observations: {list(undersized.index)}."
 
     logger.debug(f"Categorical validation passed: '{col_name}' has {len(clean)} valid values in {n_categories} categories")
     return True, None
