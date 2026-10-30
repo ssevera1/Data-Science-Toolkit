@@ -130,7 +130,7 @@ def validate_nominal(col_name, min_categories=2):
     return True, None
 
 
-def validate_categorical(col_name, min_category_size=2):
+def validate_categorical(col_name, min_category_size=2, min_sample_size=None):
     """Validate a categorical column, ensuring sufficient sample size and category distribution."""
     df = get_df()
     empty_check = _check_df_not_empty(df)
@@ -143,6 +143,10 @@ def validate_categorical(col_name, min_category_size=2):
     if len(clean) < 2:
         logger.debug(f"Categorical validation failed: '{col_name}' has {len(clean)} non-null values (minimum 2 required)")
         return False, f"'{col_name}' needs at least 2 valid values."
+
+    if min_sample_size is not None and len(clean) < min_sample_size:
+        logger.debug(f"Categorical validation failed: '{col_name}' has {len(clean)} observations (minimum {min_sample_size} required)")
+        return False, f"'{col_name}' needs at least {min_sample_size} observations, found {len(clean)}."
 
     value_counts = clean.value_counts()
     value_counts = value_counts[value_counts > 0]
