@@ -101,3 +101,22 @@ def test_validate_categorical_rejects_undersized_category():
 def test_validate_categorical_accepts_all_categories_meeting_min_size():
     set_df(pd.DataFrame({"col": ["red", "red", "blue", "blue"]}))
     assert validate_categorical("col", min_category_size=2) == (True, None)
+
+
+def test_validate_categorical_rejects_below_min_sample_size():
+    set_df(pd.DataFrame({"col": ["red", "red", "blue", "blue"]}))
+    ok, msg = validate_categorical("col", min_sample_size=10)
+    assert ok is False
+    assert "at least 10 observations, found 4" in msg
+
+
+def test_validate_categorical_accepts_at_min_sample_size():
+    set_df(pd.DataFrame({"col": ["red", "red", "blue", "blue"]}))
+    assert validate_categorical("col", min_sample_size=4) == (True, None)
+
+
+def test_validate_categorical_min_sample_size_message_takes_precedence_over_floor():
+    set_df(pd.DataFrame({"col": ["red"]}))
+    ok, msg = validate_categorical("col", min_sample_size=30)
+    assert ok is False
+    assert "at least 30 observations, found 1" in msg
