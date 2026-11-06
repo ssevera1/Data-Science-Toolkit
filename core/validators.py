@@ -46,8 +46,8 @@ def validate_metric(col_name):
     return True, None
 
 
-def validate_groups(metric_col, group_col, min_groups=2, max_groups=None):
-    """Validate grouping variable has the right number of groups with data."""
+def validate_groups(metric_col, group_col, min_groups=2, max_groups=None, min_group_size=2):
+    """Validate grouping variable has the right number of groups with sufficient data."""
     df = get_df()
     empty_check = _check_df_not_empty(df)
     if empty_check:
@@ -79,9 +79,9 @@ def validate_groups(metric_col, group_col, min_groups=2, max_groups=None):
     for g in groups:
         n = len(clean[clean[group_col] == g])
         logger.debug(f"Group '{g}' has {n} observations")
-        if n < 2:
-            logger.debug(f"Groups validation failed: group '{g}' has {n} observations (minimum 2 required)")
-            return False, f"Group '{g}' in '{group_col}' has fewer than 2 observations."
+        if n < min_group_size:
+            logger.debug(f"Groups validation failed: group '{g}' has {n} observations (minimum {min_group_size} required)")
+            return False, f"Group '{g}' in '{group_col}' has fewer than {min_group_size} observations."
 
     logger.debug(f"Groups validation passed: {n_groups} groups with sufficient observations")
     return True, None
