@@ -140,7 +140,7 @@ def validate_categorical(col_name, min_category_size=2, min_sample_size=None):
     clean = df[col_name].dropna()
     logger.debug(f"Categorical validation for '{col_name}': {len(clean)} non-null values")
 
-    if len(clean) < 2:
+    if min_sample_size is None and len(clean) < 2:
         logger.debug(f"Categorical validation failed: '{col_name}' has {len(clean)} non-null values (minimum 2 required)")
         return False, f"'{col_name}' needs at least 2 valid values."
 
