@@ -120,3 +120,10 @@ def test_validate_categorical_min_sample_size_message_takes_precedence_over_floo
     ok, msg = validate_categorical("col", min_sample_size=30)
     assert ok is False
     assert "at least 30 observations, found 1" in msg
+
+
+def test_validate_categorical_default_floor_still_applies_without_min_sample_size():
+    set_df(pd.DataFrame({"col": ["red"]}))
+    ok, msg = validate_categorical("col")
+    assert ok is False
+    assert "needs at least 2 valid values" in msg
