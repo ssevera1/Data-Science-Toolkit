@@ -163,6 +163,35 @@ def validate_categorical(col_name, min_category_size=2, min_sample_size=None):
     return True, None
 
 
+def validate_categorical_by_group(col_name, group_col, min_category_size=2):
+    """Validate categorical column has minimum sample size per category across groups."""
+    df = get_df()
+    empty_check = _check_df_not_empty(df)
+    if empty_check:
+        return empty_check
+
+    clean = df[[col_name, group_col]].dropna()
+    logger.debug(f"Categorical by group validation for '{col_name}' grouped by '{group_col}': {len(clean)} rows after dropna")
+
+    if len(clean) < 2:
+        logger.debug(f"Categorical by group validation failed: {len(clean)} rows (minimum 2 required)")
+        return False, f"Insufficient data in '{col_name}' and '{group_col}'."
+
+    value_counts = clean[col_name].value_counts()
+    value_counts = value_counts[value_counts > 0]
+    n_categories = len(value_counts)
+    logger.debug(f"Categorical by group validation: '{col_name}' has {n_categories} unique categories")
+
+    undersized = value_counts[value_counts < min_category_size]
+    if len(undersized) > 0:
+        category_word = "category" if len(undersized) == 1 else "categories"
+        logger.debug(f"Categorical by group validation failed: '{col_name}' has {len(undersized)} {category_word} with fewer than {min_category_size} observations: {list(undersized.index)}")
+        return False, f"'{col_name}' has {len(undersized)} {category_word} with fewer than {min_category_size} observations: {list(undersized.index)}."
+
+    logger.debug(f"Categorical by group validation passed: '{col_name}' has {n_categories} categories with sufficient observations")
+    return True, None
+
+
 def validate_survival_inputs(time_col, event_col):
     """Validate survival analysis time and event columns."""
     df = get_df()
