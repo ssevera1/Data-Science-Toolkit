@@ -6,6 +6,7 @@ import streamlit as st
 
 from core.validators import (
     validate_categorical,
+    validate_categorical_by_group,
     validate_column_exists,
     validate_groups,
     validate_survival_inputs,
@@ -120,3 +121,39 @@ def test_validate_categorical_min_sample_size_message_takes_precedence_over_floo
     ok, msg = validate_categorical("col", min_sample_size=30)
     assert ok is False
     assert "at least 30 observations, found 1" in msg
+
+
+def test_validate_categorical_by_group_rejects_undersized_cell_despite_sufficient_global_count():
+    # Group B has only one "X" observation even though X totals 6 and Y
+    # totals 5 across both groups combined. A global category count would
+    # miss this; the check must catch the sparse (group, category) cell.
+    set_df(
+        pd.DataFrame(
+            {
+                "cat": ["X"] * 6 + ["Y"] * 5,
+                "grp": ["A"] * 5 + ["B"] + ["B"] * 5,
+            }
+        )
+    )
+    ok, msg = validate_categorical_by_group("cat", "grp", min_category_size=2)
+    assert ok is False
+    assert "group 'B' category 'X'" in msg
+
+
+def test_validate_categorical_by_group_accepts_when_every_cell_meets_min_size():
+    set_df(
+        pd.DataFrame(
+            {
+                "cat": ["X", "X", "Y", "Y", "X", "X", "Y", "Y"],
+                "grp": ["A", "A", "A", "A", "B", "B", "B", "B"],
+            }
+        )
+    )
+    assert validate_categorical_by_group("cat", "grp", min_category_size=2) == (True, None)
+
+
+def test_validate_categorical_by_group_rejects_insufficient_rows():
+    set_df(pd.DataFrame({"cat": ["X", None], "grp": ["A", "A"]}))
+    ok, msg = validate_categorical_by_group("cat", "grp")
+    assert ok is False
+    assert "Insufficient data" in msg
