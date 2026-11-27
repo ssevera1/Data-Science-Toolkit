@@ -101,10 +101,6 @@ def _auto_detect_type(col, df):
     numeric = pd.to_numeric(series, errors="coerce")
     non_null_numeric = numeric.notna().sum()
 
-    if non_null_numeric == 0:
-        logger.warning("Column '%s': no numeric values after coercion", col)
-        raise DataValidationError(f"Column '{col}' has no valid numeric data after coercion.")
-
     if non_null_numeric / len(series) > 0.5:
         n_unique = numeric.dropna().nunique()
         if n_unique <= 2:
